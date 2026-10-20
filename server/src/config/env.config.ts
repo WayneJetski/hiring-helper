@@ -19,9 +19,20 @@ export const ENV_FILE_PATH = resolve(__dirname, '../../../.env');
 
 dotenv.config({ path: ENV_FILE_PATH });
 
+/**
+ * Values shipped in .env.example. Installers copy that file to .env, so these must read as
+ * "not configured" or the setup screen is skipped on a fresh install.
+ */
+const PLACEHOLDER_CREDENTIALS = new Set(['your_api_key_here', 'your_company_subdomain']);
+
+export function readCredential(rawValue: string | undefined): string {
+  const value = (rawValue ?? '').trim();
+  return PLACEHOLDER_CREDENTIALS.has(value) ? '' : value;
+}
+
 const credentials = {
-  apiKey: process.env.BAMBOOHR_API_KEY ?? '',
-  subdomain: process.env.BAMBOOHR_SUBDOMAIN ?? '',
+  apiKey: readCredential(process.env.BAMBOOHR_API_KEY),
+  subdomain: readCredential(process.env.BAMBOOHR_SUBDOMAIN),
 };
 
 export const config = {
