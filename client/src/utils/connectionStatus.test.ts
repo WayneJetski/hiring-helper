@@ -44,3 +44,10 @@ test('the badge wording changes with the state, not just the color', () => {
   assert.equal(describeConnection({ state: 'offline', message: '' }, 'acme'), 'Not connected to acme.bamboohr.com');
   assert.equal(describeConnection(CHECKING_STATUS, 'acme'), 'Checking acme.bamboohr.com…');
 });
+
+test('the badge says setup is incomplete while there is no company subdomain', () => {
+  const expected = 'Not connected - setup incomplete';
+  assert.equal(describeConnection(CHECKING_STATUS, ''), expected);
+  assert.equal(describeConnection({ state: 'online', message: '' }, ''), expected);
+  assert.equal(describeConnection({ state: 'offline', message: '' }, '  '), expected);
+});

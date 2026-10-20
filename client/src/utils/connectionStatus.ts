@@ -35,6 +35,8 @@ export function statusFromError(error: unknown): ConnectionStatus {
 }
 
 export function describeConnection(status: ConnectionStatus, subdomain: string): string {
+  // No company address yet (fresh install): there is nothing to name, so say setup is unfinished.
+  if (subdomain.trim() === '') return 'Not connected - setup incomplete';
   const address = `${subdomain}.bamboohr.com`;
   if (status.state === 'online') return `Connected to ${address}`;
   if (status.state === 'offline') return `Not connected to ${address}`;
