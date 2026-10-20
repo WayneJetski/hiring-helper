@@ -1,0 +1,8 @@
+# Windows launchers must keep CRLF line endings.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.sh text eol=lf
+bin/hiring-helper text eol=lf
+bin/hiring-helper.cmd text eol=crlf
+install.sh text eol=lf
+install.ps1 text eol=crlf

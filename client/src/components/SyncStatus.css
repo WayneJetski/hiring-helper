@@ -1,0 +1,11 @@
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--hh-muted);
+}
+
+.sync-status.is-problem {
+  color: #8a4b00;
+}

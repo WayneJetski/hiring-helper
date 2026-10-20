@@ -1,0 +1,117 @@
+.views-menu {
+  position: relative;
+}
+
+.views-menu-button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+  cursor: pointer;
+}
+
+.views-menu-button:hover {
+  background: var(--hh-surface-alt);
+}
+
+.views-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 320px;
+  padding: 0.5rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-surface);
+  box-shadow: var(--hh-shadow-md);
+}
+
+.views-menu-section + .views-menu-section,
+.views-menu-save {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--hh-border);
+}
+
+.views-menu-heading {
+  display: block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hh-muted);
+}
+
+.views-menu-item {
+  display: block;
+  flex: 1;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--hh-ink);
+  text-align: left;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+.views-menu-item:hover {
+  background: var(--hh-tint);
+}
+
+.views-menu-saved {
+  display: flex;
+  align-items: center;
+}
+
+.views-menu-delete {
+  padding: 0.3rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--hh-muted);
+  cursor: pointer;
+}
+
+.views-menu-delete:hover {
+  background: #fdecec;
+  color: #b42318;
+}
+
+.views-menu-empty {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--hh-muted);
+}
+
+.views-menu-save-row {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.views-menu-save-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+}
+
+.views-menu-save-row button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 6px;
+  background: var(--hh-primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.views-menu-save-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

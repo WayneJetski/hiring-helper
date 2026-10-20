@@ -1,0 +1,152 @@
+.score-button {
+  padding: 0.75rem 1.25rem;
+  background: var(--hh-accent);
+  color: var(--hh-primary);
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.score-button:hover:not(:disabled) {
+  background: var(--hh-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(242, 184, 75, 0.4);
+}
+.score-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rescore-button {
+  padding: 0.75rem 1.25rem;
+  background: white;
+  color: var(--hh-primary);
+  border: 1px solid var(--hh-primary);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.rescore-button:hover:not(:disabled) {
+  background: var(--hh-tint);
+}
+.rescore-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rescore-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  background: #fffbeb;
+  font-size: 0.9rem;
+  color: #92600a;
+}
+.rescore-confirm-controls {
+  display: flex;
+  gap: 0.6rem;
+}
+.rescore-confirm-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--hh-primary);
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+}
+.rescore-confirm-button:hover:not(:disabled) {
+  background: var(--hh-primary-hover);
+}
+.rescore-cancel {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+.rescore-confirm-button:disabled,
+.rescore-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Action bar children: panels (confirmations, progress, results) span the full row. */
+.action-panel {
+  flex: 1 0 100%;
+}
+
+.action-count {
+  min-width: 1.4rem;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.score-button,
+.rescore-button {
+  height: 2.75rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* A job that still needs setting up */
+.scoring-setup-needed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 1rem;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #5c3b00;
+}
+
+.scoring-setup-needed ul {
+  margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scoring-setup-needed li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1rem 0;
+}
+
+.scoring-setup-needed li.is-done {
+  color: #14532d;
+}
+
+.scoring-setup-button {
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 8px;
+  background: var(--hh-primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.scoring-setup-button:hover {
+  background: var(--hh-primary-hover);
+}

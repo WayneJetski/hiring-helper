@@ -1,0 +1,86 @@
+.scoring-progress {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-tint);
+}
+
+.scoring-progress-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.scoring-progress-heading {
+  font-weight: 600;
+  color: var(--hh-primary);
+}
+
+.scoring-progress-estimate {
+  flex: 1;
+  color: var(--hh-muted);
+  font-size: 0.9rem;
+}
+
+.scoring-progress-cancel {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+  cursor: pointer;
+}
+
+.scoring-progress-cancel:hover:not(:disabled) {
+  background: var(--hh-surface-alt);
+}
+
+.scoring-progress-cancel:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.scoring-progress-track {
+  height: 8px;
+  margin-top: 0.6rem;
+  border-radius: 999px;
+  background: rgba(31, 77, 58, 0.12);
+  overflow: hidden;
+}
+
+.scoring-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--hh-primary);
+  transition: width 0.4s ease;
+}
+
+.scoring-progress-fill.indeterminate {
+  width: 35%;
+  animation: scoring-progress-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes scoring-progress-slide {
+  0% {
+    margin-left: -35%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scoring-progress-fill.indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
+.scoring-progress-note {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--hh-muted);
+}

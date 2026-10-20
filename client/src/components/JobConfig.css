@@ -1,0 +1,393 @@
+.job-config {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface-alt);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.job-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.job-config-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.job-config-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--hh-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.job-config-close:hover {
+  background: var(--hh-border);
+}
+
+.job-config-label {
+  display: block;
+  font-weight: 600;
+  color: var(--hh-ink);
+  margin-top: 1rem;
+}
+
+.job-config-hint {
+  margin: 0.15rem 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--hh-subtle);
+}
+
+.job-config-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.job-config-badge {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.job-config-badge.custom {
+  background: var(--hh-tint);
+  color: var(--hh-primary);
+}
+
+.job-config-badge.default {
+  background: var(--hh-border);
+  color: var(--hh-subtle);
+}
+
+.job-config-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.job-config-textarea.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+}
+
+.job-config-textarea:focus {
+  outline: none;
+  border-color: var(--hh-primary);
+  box-shadow: 0 0 0 3px rgba(31, 77, 58, 0.1);
+}
+
+.job-config-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/*
+ * Pinned to the bottom of the modal's scrolling body so Save is always in
+ * reach. The negative margins cancel the body's 1.25rem padding so the bar
+ * spans the full width and sits flush at the bottom edge.
+ */
+.job-config-footer {
+  position: sticky;
+  bottom: -1.25rem;
+  z-index: 5;
+  margin: 1rem -1.25rem -1.25rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--hh-border);
+  background: var(--hh-surface);
+  box-shadow: 0 -4px 10px rgba(31, 77, 58, 0.06);
+}
+
+.job-config-footer .job-config-message {
+  margin: 0 0 0.6rem;
+}
+
+.job-config-footer-spacer {
+  flex: 1 1 0;
+}
+
+.job-config-save {
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--hh-primary);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.job-config-save:hover:not(:disabled) {
+  background: var(--hh-primary);
+}
+
+.job-config-reset {
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.job-config-reset:hover:not(:disabled) {
+  border-color: #f59e0b;
+  color: #92600a;
+}
+
+.job-config-save:disabled,
+.job-config-reset:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.job-config-note {
+  color: var(--hh-subtle);
+  font-size: 0.9rem;
+}
+
+.job-config-message {
+  margin-top: 0.85rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.job-config-message.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+}
+
+.job-config-message.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
+.job-config-import {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+
+.job-config-import-button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: var(--hh-primary);
+  cursor: pointer;
+}
+
+.job-config-import-button:hover:not(:disabled) {
+  background: var(--hh-tint);
+}
+
+.job-config-import-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.job-config-import-cancel {
+  border: none;
+  background: none;
+  color: var(--hh-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Inside the modal the panel needs no card chrome of its own. */
+.job-config {
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+/* ---- Tabs ---- */
+.job-config-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--hh-border);
+}
+
+.job-config-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: -1px;
+  padding: 0.6rem 1rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: none;
+  color: var(--hh-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.job-config-tab:hover {
+  color: var(--hh-primary);
+}
+
+.job-config-tab.is-active {
+  border-color: var(--hh-border);
+  background: var(--hh-surface);
+  color: var(--hh-primary);
+  box-shadow: inset 0 3px 0 var(--hh-accent);
+}
+
+.job-config-tab.is-locked {
+  color: #9aafa6;
+  cursor: not-allowed;
+}
+
+.job-config-tab.is-locked:hover {
+  color: #9aafa6;
+}
+
+.job-config-tab-lock-note {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--hh-surface-alt);
+  color: var(--hh-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.job-config-tab-edited {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: #fff3d6;
+  color: #7a4a00;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.job-config-panel .job-config-label:first-child {
+  margin-top: 0;
+}
+
+.job-config-save-hint {
+  align-self: center;
+  color: var(--hh-muted);
+  font-size: 0.85rem;
+}
+
+.job-config-legacy {
+  padding: 1rem;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #5c3b00;
+}
+
+.job-config-legacy p {
+  margin-bottom: 0.75rem;
+}
+
+/* Setup checklist and criteria confirmation */
+.job-config-setup {
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #5c3b00;
+}
+
+.job-config-setup ul {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-config-setup li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.job-config-setup li.is-done {
+  color: #14532d;
+}
+
+.job-config-setup-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--hh-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.job-config-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #5c3b00;
+}
+
+.job-config-confirm-button {
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--hh-accent-hover);
+  border-radius: 8px;
+  background: var(--hh-accent);
+  color: var(--hh-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.job-config-confirm-button:hover:not(:disabled) {
+  background: var(--hh-accent-hover);
+}
+
+.job-config-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.job-config-undo {
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--hh-muted);
+}
+
+.job-config-skeleton-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}

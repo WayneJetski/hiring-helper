@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hiring-helper": {
+      "command": "node",
+      "args": ["--import", "tsx", "server/src/mcp/index.ts"]
+    }
+  }
+}

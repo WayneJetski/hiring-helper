@@ -1,0 +1,71 @@
+.update-banner {
+  background: var(--hh-tint);
+  border-bottom: 1px solid var(--hh-border);
+  color: var(--hh-primary);
+}
+
+.update-banner.is-problem {
+  background: #fff8e6;
+  border-bottom-color: #f0c36d;
+  color: #5c3b00;
+}
+
+.update-banner-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  max-width: var(--hh-page-width);
+  margin: 0 auto;
+  padding: 0.6rem 2rem;
+  font-size: 0.92rem;
+}
+
+.update-banner-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 320px;
+  font-weight: 500;
+}
+
+.update-banner-text code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.update-banner-link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.update-banner-button {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--hh-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.update-banner-button:hover {
+  background: var(--hh-primary-hover);
+}
+
+.update-banner-secondary {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .update-banner-inner {
+    padding: 0.6rem 1rem;
+  }
+}

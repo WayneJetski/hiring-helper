@@ -1,0 +1,135 @@
+{
+  "agent_rules": [
+    {
+      "name": "General Coding Philosophy",
+      "rules": [
+        "Always produce production-quality, maintainable code, not throwaway demos.",
+        "Prioritize clarity, correctness, and readability over brevity.",
+        "Write idiomatic, modern JavaScript/TypeScript (ES2020+ or latest Node LTS).",
+        "Be explicit, typed, and predictable; avoid clever one-liners that reduce clarity.",
+        "Favor composition over inheritance, pure functions over side effects."
+      ]
+    },
+    {
+      "name": "Code Structure",
+      "rules": [
+        "Separate concerns between frontend (components, hooks, context, utils) and backend (controllers, services, repositories, routes, utils).",
+        "Functions should have a single responsibility.",
+        "Use descriptive names for functions, classes, and variables.",
+        "Organize imports clearly: external libraries first, then internal modules, then styles.",
+        "Avoid large god files; split modules into logical, cohesive pieces."
+      ]
+    },
+    {
+      "name": "TypeScript & JS Practices",
+      "rules": [
+        "Use TypeScript with strict mode enabled ('strict': true).",
+        "Avoid 'any'; prefer generics or union types.",
+        "Return explicit types from all exported functions.",
+        "Use ES modules and async/await; avoid .then() chains.",
+        "Use constants instead of magic numbers/strings.",
+        "Handle all async calls with proper error handling (try/catch)."
+      ]
+    },
+    {
+      "name": "NodeJS Backend Rules",
+      "rules": [
+        "Structure backend code into src/{controllers, services, repositories, routes, models, middleware, utils}.",
+        "Controllers handle validation and response formatting only.",
+        "Services contain business logic, isolated and testable.",
+        "Repositories encapsulate persistence and DB/API calls.",
+        "Use async/await; never trust request input, validate and sanitize all params, body, and query.",
+        "Return proper HTTP status codes and JSON responses.",
+        "Never hardcode secrets; use process.env for configuration.",
+        "Keep modules stateless; prefer dependency injection.",
+        "Handle errors centrally via an error middleware.",
+        "Use parameterized queries or ORM-safe APIs for database access."
+      ]
+    },
+    {
+      "name": "React Frontend Rules",
+      "rules": [
+        "Use functional components and hooks only; no class components.",
+        "Each component should do one thing; extract logic to custom hooks if needed.",
+        "Define explicit Props interfaces; avoid implicit any.",
+        "Prefer controlled components for forms.",
+        "Derive state rather than duplicating it.",
+        "Avoid inline anonymous functions in render unless trivial.",
+        "Use useCallback/useMemo where it improves performance.",
+        "Keep state local unless truly global; use Context or state management libraries if needed.",
+        "Handle async effects safely; clean up pending requests in useEffect.",
+        "Avoid unnecessary re-renders; memoize heavy components.",
+        "Use semantic HTML and consistent JSX formatting."
+      ]
+    },
+    {
+      "name": "Styling",
+      "rules": [
+        "Use CSS Modules, Tailwind, or styled-components for scoped styling.",
+        "Class names should reflect component purpose, not appearance.",
+        "Follow design system or theme if available."
+      ]
+    },
+    {
+      "name": "Testing Rules",
+      "rules": [
+        "All new code should be testable.",
+        "Use Jest for NodeJS and React Testing Library for React components.",
+        "Test behavior, not implementation details.",
+        "Mock external dependencies and network calls only when necessary.",
+        "Follow given-when-then naming convention for test cases."
+      ]
+    },
+    {
+      "name": "Code Review Readiness",
+      "rules": [
+        "Ensure code compiles and runs with no warnings.",
+        "Validate inputs and handle edge cases.",
+        "All async operations must be awaited.",
+        "Use clear, domain-driven naming.",
+        "Comments explain 'why', not 'what'.",
+        "Adhere to ESLint and Prettier formatting.",
+        "Include at least one test if new logic is introduced."
+      ]
+    },
+    {
+      "name": "Security & Reliability",
+      "rules": [
+        "Never log or expose secrets.",
+        "Validate all user input at boundaries.",
+        "Escape or sanitize all output rendered in React.",
+        "Use HTTPS and secure cookies when applicable.",
+        "Handle unhandled promise rejections.",
+        "Rate-limit sensitive endpoints.",
+        "Use prepared statements or ORM-safe APIs for DB access."
+      ]
+    },
+    {
+      "name": "Dev Experience",
+      "rules": [
+        "Use environment variables for configuration; never commit secrets.",
+        "Prefer npm scripts or pnpm for build/test/run.",
+        "Log in structured format (JSON or tagged logs).",
+        "Follow Prettier/ESLint conventions automatically.",
+        "Include README snippets or usage notes for new modules."
+      ]
+    },
+    {
+      "name": "Output Formatting",
+      "rules": [
+        "Return complete, runnable code blocks with all imports, types, and helper functions.",
+        "Format code according to Prettier defaults.",
+        "Add a brief top comment describing what the code does.",
+        "Omit filler text; show clean final code only."
+      ]
+    },
+    {
+      "name": "When Unsure",
+      "rules": [
+        "If requirements are ambiguous, clarify assumptions in comments.",
+        "Prefer presenting two implementation options with trade-offs if design is unclear.",
+        "Do not hallucinate API endpoints, types, or file paths."
+      ]
+    }
+  ]
+}

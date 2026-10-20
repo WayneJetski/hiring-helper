@@ -1,0 +1,235 @@
+.criteria-generator {
+  margin-top: 0.6rem;
+  margin-bottom: 1.25rem;
+  padding: 0.7rem 1rem 0.9rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-tint);
+}
+
+.criteria-generator h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0;
+  margin-bottom: 0.15rem;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  color: var(--hh-primary);
+}
+
+.criteria-generator-hint {
+  margin: 0.1rem 0 0.55rem;
+  font-size: 0.88rem;
+  color: var(--hh-muted);
+}
+
+.criteria-generator-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.criteria-generator-option {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 8px;
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.criteria-generator-option:hover:not(:disabled) {
+  background: #ffffff;
+  box-shadow: var(--hh-shadow-md);
+}
+
+.criteria-generator-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.criteria-generator-option-title {
+  font-weight: 600;
+  color: var(--hh-primary);
+}
+
+.criteria-generator-option-text {
+  font-size: 0.88rem;
+  color: var(--hh-muted);
+}
+
+.criteria-generator-warning,
+.criteria-generator-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.criteria-generator-warning {
+  color: #8a4b00;
+}
+
+.criteria-generator-error {
+  color: #9a1c1c;
+}
+
+.criteria-generator-working {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--hh-primary);
+}
+
+.criteria-survey {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.criteria-survey-question {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface);
+}
+
+.criteria-survey-question + .criteria-survey-question {
+  margin-top: 0.6rem;
+}
+
+.criteria-survey fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.criteria-survey legend {
+  margin-bottom: 0.4rem;
+  padding: 0;
+  font-weight: 600;
+}
+
+.criteria-survey-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+.criteria-survey-option input {
+  margin-top: 0.3rem;
+}
+
+.criteria-survey-other {
+  width: 100%;
+  margin: 0.25rem 0 0 1.5rem;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.criteria-generator-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.9rem;
+}
+
+.criteria-generator-primary {
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 8px;
+  background: var(--hh-primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.criteria-generator-primary:hover:not(:disabled) {
+  background: var(--hh-primary-hover);
+}
+
+.criteria-generator-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.criteria-generator-secondary {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+  cursor: pointer;
+}
+
+.criteria-generator-secondary:hover {
+  background: var(--hh-surface-alt);
+}
+
+.criteria-generator-link {
+  border: none;
+  background: none;
+  color: var(--hh-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.criteria-generator-summary {
+  margin: 0.4rem 0 0.8rem;
+  font-size: 0.92rem;
+  color: var(--hh-ink);
+}
+
+.criteria-review {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.criteria-review-area {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface);
+}
+
+.criteria-review-area + .criteria-review-area {
+  margin-top: 0.5rem;
+}
+
+.criteria-review-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 600;
+}
+
+.criteria-review-points {
+  white-space: nowrap;
+  color: var(--hh-primary);
+}
+
+.criteria-review-area ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: var(--hh-muted);
+}
+
+@media (max-width: 640px) {
+  .criteria-generator-options {
+    grid-template-columns: 1fr;
+  }
+}

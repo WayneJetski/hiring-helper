@@ -1,0 +1,73 @@
+.row-action-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 520px;
+}
+
+.row-action-current {
+  color: var(--hh-muted);
+}
+
+.row-action-label {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.row-action-select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background-color: var(--hh-surface);
+  font-size: 1rem;
+}
+
+.row-action-note {
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--hh-muted);
+}
+
+.row-action-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: #fdecec;
+  color: #7a1c1c;
+}
+
+.row-action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.row-action-confirm {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 8px;
+  background: var(--hh-primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.row-action-confirm.is-danger {
+  border-color: #b42318;
+  background: #b42318;
+}
+
+.row-action-confirm:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.row-action-cancel {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface);
+  cursor: pointer;
+}

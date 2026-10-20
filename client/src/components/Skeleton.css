@@ -1,0 +1,113 @@
+.skeleton {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 6px;
+  vertical-align: middle;
+  background: linear-gradient(
+    90deg,
+    var(--hh-border) 25%,
+    var(--hh-surface-alt) 50%,
+    var(--hh-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton--pill {
+  border-radius: 999px;
+}
+
+.skeleton--on-dark {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.16) 25%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.16) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--hh-border);
+  }
+
+  .skeleton--on-dark {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* ---- Page skeletons: the real layout classes do the spacing; these set only sizes ---- */
+
+.skeleton-row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.skeleton-table-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.skeleton-header-badges {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.skeleton-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.skeleton-card-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.skeleton-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.skeleton-assessment {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--hh-surface-alt);
+}
+
+.skeleton-assessment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.skeleton-search {
+  flex: 1 1 220px;
+  width: auto !important; /* beats the inline width so it can grow like the real search box */
+}

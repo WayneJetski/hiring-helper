@@ -1,0 +1,217 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# A newer push to the same branch or pull request makes the older run pointless.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build, lint and test (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 22 }
+          - { os: ubuntu-latest, node: 24 }
+          # The app is installed on Windows, so keep Windows honest too.
+          - { os: windows-latest, node: 22 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Builds the client (type-checks, then bundles) and the server (type-checks and compiles).
+      - name: Build
+        run: npm run build
+
+      - name: Lint server
+        run: npm run lint --workspace=server
+
+      - name: Lint client
+        run: npm run lint --workspace=client
+
+      - name: Test server
+        run: npm run test --workspace=server
+
+      - name: Test client
+        run: npm run test --workspace=client
+
+  # The Windows launcher cannot be run in CI (it installs software), but it can be
+  # checked for the mistakes that would stop it starting at all.
+  launcher:
+    name: Windows scripts parse
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # start.bat and hiring-helper.cmd run Windows PowerShell 5.1, so parse with that, not PowerShell 7.
+      - name: PowerShell scripts parse in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          foreach ($script in @('scripts\launcher\start.ps1', 'scripts\launcher\hiring-helper.ps1', 'install.ps1')) {
+            $errors = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile("$PWD\$script", [ref]$null, [ref]$errors)
+            foreach ($problem in $errors) {
+              Write-Host "::error file=$($script -replace '\\', '/'),line=$($problem.Extent.StartLineNumber)::$($problem.Message)"
+              $failed = $true
+            }
+            if ($errors.Count -eq 0) { Write-Host "$script parses cleanly" }
+          }
+          if ($failed) { exit 1 }
+
+  # Runs the real installer against this commit, then starts, checks and stops the app.
+  installer-unix:
+    name: Installer smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      HH_YES: '1'
+      HH_SKIP_CLAUDE: '1'
+      HH_NO_BROWSER: '1'
+      HH_NO_PATH: '1'
+      HH_NO_START: '1'
+      HH_BRANCH: ci-install
+      HH_REPO_URL: file://${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The installer clones a branch; give it one that points at exactly this commit.
+      # (The runner's temp folder is only known inside a step, so the install folder is set here.)
+      - name: Prepare
+        run: |
+          git checkout -B ci-install
+          echo "HH_DIR=$RUNNER_TEMP/hiring-helper" >> "$GITHUB_ENV"
+
+      - name: Install
+        run: bash install.sh
+
+      - name: Start, check and stop
+        run: |
+          "$HH_DIR/bin/hiring-helper" start --no-open
+          "$HH_DIR/bin/hiring-helper" status
+          curl -fsS "http://127.0.0.1:28417/health"
+          curl -fsS "http://127.0.0.1:28417/api/update/status"
+          "$HH_DIR/bin/hiring-helper" update --check
+          "$HH_DIR/bin/hiring-helper" stop
+
+      - name: Show the log if something failed
+        if: failure()
+        run: cat "$HH_DIR/.runtime/server.log" || true
+
+  installer-windows:
+    name: Installer smoke test (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      HH_YES: '1'
+      HH_SKIP_CLAUDE: '1'
+      HH_NO_BROWSER: '1'
+      HH_NO_PATH: '1'
+      HH_NO_START: '1'
+      HH_BRANCH: ci-install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Point a branch at this commit
+        run: git checkout -B ci-install
+
+      # Windows PowerShell 5.1, the same way a person runs it: the script text piped to iex.
+      - name: Install
+        shell: powershell
+        run: |
+          $env:HH_REPO_URL = "file:///$($env:GITHUB_WORKSPACE -replace '\\', '/')"
+          $env:HH_DIR = Join-Path $env:RUNNER_TEMP 'hiring-helper'
+          Get-Content install.ps1 -Raw | Invoke-Expression
+          if (-not (Test-Path (Join-Path $env:HH_DIR 'bin\hiring-helper.cmd'))) { throw 'The installer did not create the hiring-helper command.' }
+
+      - name: Start, check and stop
+        shell: powershell
+        run: |
+          $command = Join-Path $env:RUNNER_TEMP 'hiring-helper\bin\hiring-helper.cmd'
+          & $command start --no-open
+          if ($LASTEXITCODE -ne 0) { throw 'start failed' }
+          & $command status
+          Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:28417/health' | Out-Null
+          & $command stop
+
+      - name: Show the log if something failed
+        if: failure()
+        shell: powershell
+        run: |
+          $runtime = Join-Path $env:RUNNER_TEMP 'hiring-helper\.runtime'
+          foreach ($name in 'server.log', 'server.err.log') {
+            $path = Join-Path $runtime $name
+            if (Test-Path $path) { Write-Host "--- $name"; Get-Content $path -Tail 50 }
+          }
+
+  # Cheap guards for mistakes that are easy to make and expensive to publish.
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lockfile resolves only from the public npm registry
+        run: |
+          if grep -E '"resolved": "https?://' package-lock.json | grep -v 'https://registry.npmjs.org/'; then
+            echo "::error file=package-lock.json::package-lock.json points at a registry other than registry.npmjs.org (a private mirror?). Reinstall with the project .npmrc."
+            exit 1
+          fi
+
+      - name: No local data or secrets are tracked
+        run: |
+          tracked=$(git ls-files | grep -E '(^|/)\.env$|\.db(-wal|-shm|-journal)?$|^server/data/(cache|backups)/|^server/data/scores\.json$' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::These files hold local data or secrets and must not be committed:"
+            echo "$tracked"
+            exit 1
+          fi
+
+      # Windows PowerShell 5.1 misreads UTF-8 without a BOM, so the Windows scripts must stay ASCII.
+      - name: Windows scripts are ASCII-only
+        run: |
+          if grep -nP '[^\x00-\x7F]' start.bat bin/hiring-helper.cmd install.ps1 scripts/launcher/start.ps1 scripts/launcher/hiring-helper.ps1; then
+            echo "::error::The Windows scripts must contain only ASCII characters."
+            exit 1
+          fi
+
+      - name: Shell scripts parse
+        run: |
+          for script in install.sh bin/hiring-helper scripts/launcher/setup.sh; do
+            bash -n "$script" && echo "$script parses cleanly"
+          done
+
+      # A script that loses its executable bit in git cannot be run after cloning.
+      - name: Shell scripts are executable in git
+        run: |
+          for script in install.sh bin/hiring-helper scripts/launcher/setup.sh; do
+            mode=$(git ls-files -s "$script" | cut -d' ' -f1)
+            if [ "$mode" != "100755" ]; then
+              echo "::error file=$script::$script must be executable (git mode 100755, found $mode). Run: git update-index --chmod=+x $script"
+              exit 1
+            fi
+          done

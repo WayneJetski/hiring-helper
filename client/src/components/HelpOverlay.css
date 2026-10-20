@@ -1,0 +1,97 @@
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  cursor: pointer;
+}
+
+.help-overlay-dim {
+  position: absolute;
+  inset: 0;
+}
+
+.help-overlay-ring {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--hh-accent);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.help-overlay-number {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hh-accent);
+  color: var(--hh-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.help-overlay-number.inline {
+  position: static;
+  flex: none;
+}
+
+.help-overlay-legend {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 0.9rem 1rem 1rem;
+  border-radius: 10px;
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+  box-shadow: var(--hh-shadow-md);
+  cursor: default;
+}
+
+.help-overlay-legend-list {
+  display: grid;
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 0.88rem;
+  line-height: 18px;
+}
+
+.help-overlay-legend-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.help-overlay-legend-text {
+  display: block;
+  color: var(--hh-muted);
+}
+
+.help-overlay-close {
+  align-self: flex-end;
+  flex: none;
+  margin-top: 0.8rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--hh-accent);
+  color: var(--hh-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.help-overlay-close:hover {
+  background: var(--hh-accent-hover);
+}
+
+.help-overlay-close:focus-visible {
+  outline: 3px solid var(--hh-primary);
+  outline-offset: 2px;
+}

@@ -1,0 +1,139 @@
+.resume-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.resume-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 94vw);
+  height: 92vh;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.resume-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--hh-border);
+}
+
+.resume-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.resume-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.resume-modal-close {
+  background: none;
+  border: 1px solid var(--hh-table-header-border);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  color: var(--hh-ink);
+}
+
+.resume-modal-close:hover {
+  background: var(--hh-surface-alt);
+}
+
+.resume-modal-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}
+
+.resume-modal-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--hh-primary);
+  font-weight: 600;
+}
+
+.resume-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.resume-modal-title h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-modal-steps {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.resume-modal-step {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: var(--hh-primary);
+  cursor: pointer;
+}
+
+.resume-modal-step:hover:not(:disabled) {
+  background: var(--hh-surface-alt);
+}
+
+.resume-modal-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.resume-modal-position {
+  color: var(--hh-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.resume-modal-footer {
+  border-top: 1px solid var(--hh-border);
+  background: var(--hh-surface-alt);
+}
+
+.resume-modal-footer .stage-move {
+  border-bottom: 0;
+}
+
+.stage-move-reject {
+  padding: 0.5rem 1rem;
+  border: 1px solid #b42318;
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: #b42318;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.stage-move-reject:hover:not(:disabled) {
+  background: #fdecec;
+}
+
+.stage-move-reject:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

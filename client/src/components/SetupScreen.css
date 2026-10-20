@@ -1,0 +1,240 @@
+.setup-screen {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-surface);
+  box-shadow: var(--hh-shadow-sm);
+}
+
+.setup-screen h1 {
+  font-size: 1.6rem;
+  color: var(--hh-primary);
+}
+
+.setup-lead {
+  margin: 0.5rem 0 1rem;
+  color: var(--hh-muted);
+}
+
+.setup-steps {
+  margin: 0 0 1.5rem;
+  padding-left: 1.25rem;
+  color: var(--hh-ink);
+}
+
+.setup-steps li + li {
+  margin-top: 0.35rem;
+}
+
+.setup-form label {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.setup-form input {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.setup-subdomain-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setup-suffix {
+  margin-top: 0.3rem;
+  color: var(--hh-muted);
+  white-space: nowrap;
+}
+
+.setup-hint {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--hh-muted);
+}
+
+.setup-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.setup-primary,
+.setup-secondary {
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.setup-primary {
+  border: 1px solid var(--hh-primary);
+  background: var(--hh-primary);
+  color: #ffffff;
+}
+
+.setup-primary:hover:not(:disabled) {
+  background: var(--hh-primary-hover);
+}
+
+.setup-secondary {
+  border: 1px solid var(--hh-primary);
+  background: var(--hh-surface);
+  color: var(--hh-primary);
+}
+
+.setup-primary:disabled,
+.setup-secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.setup-link {
+  border: none;
+  background: none;
+  color: var(--hh-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.setup-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+}
+
+.setup-result.success {
+  background: #e8f6ec;
+  color: #14532d;
+}
+
+.setup-result.error {
+  background: #fdecec;
+  color: #7a1c1c;
+}
+
+/* Each part of the page (BambooHR, Claude Code) is a section with a sub heading. */
+.setup-section {
+  margin-top: 1.5rem;
+}
+
+.setup-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.setup-claude {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--hh-border);
+}
+
+.setup-claude-ok {
+  color: #14532d;
+}
+
+.setup-claude-missing {
+  color: #8a4b00;
+}
+
+.setup-claude code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--hh-surface-alt);
+}
+
+/* Saved-connection status card */
+.setup-connection {
+  margin-top: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+}
+
+.setup-connection.ok {
+  border-color: #81c784;
+  background: #e8f6ec;
+  color: #14532d;
+}
+
+.setup-connection.problem {
+  border-color: #ef9a9a;
+  background: #fdecec;
+  color: #7a1c1c;
+}
+
+.setup-connection.checking {
+  background: var(--hh-surface-alt);
+  color: var(--hh-muted);
+}
+
+.setup-connection-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.setup-connection .setup-hint {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.setup-connection .setup-secondary {
+  margin-top: 0.75rem;
+}
+
+/* Label with a helper link on the right */
+.setup-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.setup-label-row label {
+  margin-top: 0;
+}
+
+.setup-helper-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--hh-primary);
+  text-decoration: underline;
+}
+
+.setup-helper-link:hover {
+  color: var(--hh-primary-hover);
+}
+
+.setup-claude-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+
+.setup-claude-sso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}

@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+# hiring-helper: start, stop and manage Hiring Helper (macOS and Linux).
+#
+#   hiring-helper start [--foreground] [--no-open]   start it and open the browser
+#   hiring-helper stop                               stop it
+#   hiring-helper restart [--no-open]                stop, then start
+#   hiring-helper status                             is it running, and where
+#   hiring-helper open                               open it in the browser
+#   hiring-helper logs [-f]                          show (or follow) the log
+#   hiring-helper update [--check]                   download the latest version (or just look)
+
+set -euo pipefail
+
+# Find the real folder even when this command is reached through a symlink.
+resolve_bin_dir() {
+  local source="${BASH_SOURCE[0]}" dir
+  while [ -L "$source" ]; do
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    source="$(readlink "$source")"
+    case "$source" in /*) ;; *) source="$dir/$source" ;; esac
+  done
+  cd -P "$(dirname "$source")" && pwd
+}
+
+BIN_DIR="$(resolve_bin_dir)"
+REPO_ROOT="$(cd "$BIN_DIR/.." && pwd -P)"
+RUNTIME_DIR="$REPO_ROOT/.runtime"
+PID_FILE="$RUNTIME_DIR/server.pid"
+LOG_FILE="$RUNTIME_DIR/server.log"
+SERVER_JS="$REPO_ROOT/server/dist/index.js"
+MAX_LOG_BYTES=5242880
+
+have() { command -v "$1" >/dev/null 2>&1; }
+die() { printf '%s\n' "$1" >&2; exit 1; }
+
+read_port() {
+  if [ -n "${PORT:-}" ]; then printf '%s' "$PORT"; return; fi
+  local from_file=""
+  if [ -f "$REPO_ROOT/.env" ]; then
+    from_file="$(sed -n 's/^[[:space:]]*PORT[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$REPO_ROOT/.env" | head -n1)"
+  fi
+  printf '%s' "${from_file:-3000}"
+}
+
+server_url() { printf 'http://localhost:%s' "$(read_port)"; }
+
+is_healthy() { curl -fsS -m 2 "http://127.0.0.1:$(read_port)/health" >/dev/null 2>&1; }
+
+# The pid of the running server, but only if it really is ours (pids get reused).
+server_pid() {
+  [ -f "$PID_FILE" ] || return 0
+  local pid
+  pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+  [ -n "$pid" ] || return 0
+  kill -0 "$pid" 2>/dev/null || return 0
+  case "$(ps -p "$pid" -o command= 2>/dev/null || true)" in
+    *server/dist/index.js*) printf '%s' "$pid" ;;
+  esac
+}
+
+open_browser() {
+  local url
+  url="$(server_url)"
+  if have open; then open "$url" >/dev/null 2>&1 || true
+  elif have xdg-open; then xdg-open "$url" >/dev/null 2>&1 || true
+  else printf 'Open %s in your browser.\n' "$url"
+  fi
+}
+
+# Node.js downloaded by setup, and Claude Code, live outside the usual PATH.
+use_runtime_path() {
+  [ -d "$RUNTIME_DIR/node/bin" ] && PATH="$RUNTIME_DIR/node/bin:$PATH"
+  [ -d "$HOME/.local/bin" ] && PATH="$HOME/.local/bin:$PATH"
+  export PATH
+}
+
+run_setup() { "$REPO_ROOT/scripts/launcher/setup.sh"; }
+
+wait_until_healthy() {
+  local attempt
+  for attempt in $(seq 1 90); do
+    is_healthy && return 0
+    [ -z "${1:-}" ] || kill -0 "$1" 2>/dev/null || return 1   # the server died while starting
+    sleep 1
+  done
+  return 1
+}
+
+rotate_log() {
+  mkdir -p "$RUNTIME_DIR"
+  if [ -f "$LOG_FILE" ] && [ "$(wc -c < "$LOG_FILE")" -gt "$MAX_LOG_BYTES" ]; then
+    mv "$LOG_FILE" "$LOG_FILE.old"
+  fi
+}
+
+cmd_start() {
+  local foreground=0 no_open="${HH_NO_BROWSER:-0}" skip_setup="${HH_SKIP_SETUP:-0}" arg
+  for arg in "$@"; do
+    case "$arg" in
+      --foreground) foreground=1 ;;
+      --no-open) no_open=1 ;;
+      *) die "Unknown option for start: $arg" ;;
+    esac
+  done
+  [ "$no_open" = 1 ] || no_open=0
+
+  if [ -n "$(server_pid)" ] && is_healthy; then
+    printf 'Hiring Helper is already running at %s\n' "$(server_url)"
+    [ "$no_open" = 1 ] || open_browser
+    return 0
+  fi
+  if [ -n "$(server_pid)" ]; then cmd_stop >/dev/null; fi   # a stale or stuck copy
+  if is_healthy; then
+    die "Something is already answering on port $(read_port), and it was not started by hiring-helper. Stop it, or choose another port in $REPO_ROOT/.env."
+  fi
+
+  [ "$skip_setup" = 1 ] || run_setup
+  use_runtime_path
+  [ -f "$SERVER_JS" ] || die "The app is not built yet. Run: hiring-helper start"
+  have node || die "Node.js was not found. Run: hiring-helper start"
+
+  export NODE_ENV=production HIRING_HELPER_MANAGED=1
+  cd "$REPO_ROOT"
+
+  if [ "$foreground" = 1 ]; then
+    mkdir -p "$RUNTIME_DIR"
+    echo "$$" > "$PID_FILE"
+    printf '\nStarting Hiring Helper at %s (press Ctrl+C to stop)\n' "$(server_url)"
+    if [ "$no_open" != 1 ]; then ( wait_until_healthy && open_browser ) & fi
+    exec node "$SERVER_JS"
+  fi
+
+  rotate_log
+  nohup node "$SERVER_JS" >> "$LOG_FILE" 2>&1 &
+  local pid=$!
+  echo "$pid" > "$PID_FILE"
+  disown "$pid" 2>/dev/null || true
+
+  printf '\nStarting Hiring Helper...\n'
+  if ! wait_until_healthy "$pid"; then
+    printf '\nHiring Helper did not start. The end of its log (%s):\n' "$LOG_FILE" >&2
+    tail -n 20 "$LOG_FILE" >&2 || true
+    rm -f "$PID_FILE"
+    exit 1
+  fi
+  printf 'Hiring Helper is running at %s\n' "$(server_url)"
+  printf 'Stop it with: hiring-helper stop\n'
+  [ "$no_open" = 1 ] || open_browser
+}
+
+cmd_stop() {
+  local pid waited=0
+  pid="$(server_pid)"
+  if [ -z "$pid" ]; then
+    if is_healthy; then
+      die "Something is answering on port $(read_port), but it was not started by hiring-helper, so it was left alone."
+    fi
+    rm -f "$PID_FILE"
+    echo "Hiring Helper is not running."
+    return 0
+  fi
+  kill "$pid" 2>/dev/null || true
+  while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 15 ]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+  if kill -0 "$pid" 2>/dev/null; then kill -9 "$pid" 2>/dev/null || true; fi
+  rm -f "$PID_FILE"
+  echo "Hiring Helper stopped."
+}
+
+cmd_restart() {
+  # Set up first: if that fails, the running copy is left alone.
+  run_setup
+  if [ -n "$(server_pid)" ]; then cmd_stop; fi
+  HH_SKIP_SETUP=1 cmd_start "$@"
+}
+
+cmd_status() {
+  local pid
+  pid="$(server_pid)"
+  if [ -n "$pid" ] && is_healthy; then
+    printf 'Hiring Helper is running at %s (process %s)\n' "$(server_url)" "$pid"
+  elif [ -n "$pid" ]; then
+    printf 'Hiring Helper is starting or not responding (process %s). Check: hiring-helper logs\n' "$pid"
+    return 1
+  else
+    echo "Hiring Helper is not running. Start it with: hiring-helper start"
+    return 1
+  fi
+}
+
+cmd_open() {
+  if is_healthy; then open_browser; else die "Hiring Helper is not running. Start it with: hiring-helper start"; fi
+}
+
+cmd_logs() {
+  [ -f "$LOG_FILE" ] || die "There is no log yet. Start it with: hiring-helper start"
+  if [ "${1:-}" = "-f" ]; then tail -n 50 -f "$LOG_FILE"; else tail -n 50 "$LOG_FILE"; fi
+}
+
+# Is there a newer version on the branch this copy follows? Asks the remote for the
+# branch's tip (nothing is downloaded) and checks whether this copy already has it.
+cmd_update_check() {
+  local branch local_sha remote_sha
+  branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)"
+  [ "$branch" != "HEAD" ] || die "This copy is not on a branch, so it cannot check for updates."
+  local_sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+  remote_sha="$(GIT_TERMINAL_PROMPT=0 git -C "$REPO_ROOT" ls-remote origin "refs/heads/$branch" | cut -f1)" \
+    || die "Could not reach the update server to check for updates."
+  [ -n "$remote_sha" ] || die "The update server has no \"$branch\" branch."
+
+  if [ "$remote_sha" != "$local_sha" ] && ! git -C "$REPO_ROOT" merge-base --is-ancestor "$remote_sha" HEAD 2>/dev/null; then
+    printf 'An update is available (%s -> %s). Install it with: hiring-helper update\n' "${local_sha:0:7}" "${remote_sha:0:7}"
+  else
+    printf 'You have the latest version (%s).\n' "${local_sha:0:7}"
+  fi
+}
+
+# npm can rewrite package-lock.json by itself. If that is the only change, put the file
+# back so the pull is clean; any other change is the person's and is left alone.
+restore_generated_files() {
+  local changed
+  changed="$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no | sed 's/^...//')"
+  if [ "$changed" = "package-lock.json" ]; then git -C "$REPO_ROOT" checkout -- package-lock.json; fi
+}
+
+cmd_update() {
+  have git || die "git is needed to update."
+  [ -d "$REPO_ROOT/.git" ] || die "This copy was not installed with git, so it cannot update itself."
+  if [ "${1:-}" = "--check" ]; then cmd_update_check; return 0; fi
+  local was_running=0
+  [ -z "$(server_pid)" ] || was_running=1
+
+  echo "Downloading the latest version..."
+  restore_generated_files
+  git -C "$REPO_ROOT" pull --ff-only || die "The update could not be downloaded. If you changed files in $REPO_ROOT, undo those changes and try again."
+
+  if [ "$was_running" = 1 ]; then
+    echo "Restarting with the new version..."
+    cmd_restart --no-open
+  else
+    echo "Updated. Start it with: hiring-helper start"
+  fi
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: hiring-helper <command>
+
+  start [--foreground] [--no-open]   Start Hiring Helper and open it in your browser
+  stop                               Stop it
+  restart [--no-open]                Stop, then start
+  status                             Show whether it is running, and where
+  open                               Open it in your browser
+  logs [-f]                          Show the log (-f keeps following it)
+  update [--check]                   Download the latest version (and restart if it was running);
+                                     --check only says whether one is available
+USAGE
+}
+
+main() {
+  local command="${1:-help}"
+  [ "$#" -eq 0 ] || shift
+  case "$command" in
+    start) cmd_start "$@" ;;
+    stop) cmd_stop ;;
+    restart) cmd_restart "$@" ;;
+    status) cmd_status ;;
+    open) cmd_open ;;
+    logs) cmd_logs "$@" ;;
+    update) cmd_update "$@" ;;
+    help|-h|--help) usage ;;
+    *) usage >&2; exit 1 ;;
+  esac
+}
+
+main "$@"

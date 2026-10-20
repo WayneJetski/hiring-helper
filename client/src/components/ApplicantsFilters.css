@@ -1,0 +1,313 @@
+.applicants-filters {
+  margin-bottom: 1.5rem;
+}
+
+.filters-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.job-filter {
+  min-width: 220px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.job-filter:focus {
+  outline: none;
+  border-color: var(--hh-primary);
+  box-shadow: 0 0 0 3px rgba(31, 77, 58, 0.1);
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--hh-primary);
+  box-shadow: 0 0 0 3px rgba(31, 77, 58, 0.1);
+}
+
+.status-filter-container {
+  position: relative;
+  min-width: 200px;
+}
+
+.status-filter-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+
+.status-filter-button:hover {
+  border-color: var(--hh-primary);
+}
+
+.status-filter-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropdown-arrow {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--hh-muted);
+}
+
+.status-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.status-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--hh-border);
+  font-weight: 600;
+}
+
+.clear-button {
+  padding: 0.25rem 0.75rem;
+  background: var(--hh-surface-alt);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clear-button:hover {
+  background: var(--hh-border);
+}
+
+.status-options {
+  padding: 0.5rem 0;
+}
+
+.status-group {
+  padding-bottom: 0.25rem;
+}
+
+.status-group:not(:last-child) {
+  border-bottom: 1px solid var(--hh-border);
+  margin-bottom: 0.25rem;
+}
+
+.status-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 1rem;
+  position: sticky;
+  top: 0;
+  background: var(--hh-surface-alt);
+}
+
+.status-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--hh-muted);
+}
+
+.status-group-count {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--hh-subtle);
+  background: var(--hh-border);
+  border-radius: 10px;
+  padding: 0.05rem 0.45rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.status-group-toggle {
+  padding: 0.15rem 0.6rem;
+  background: transparent;
+  border: 1px solid var(--hh-table-header-border);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: var(--hh-primary);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.status-group-toggle:hover {
+  background: var(--hh-tint);
+  border-color: var(--hh-primary);
+}
+
+.status-option {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.status-option:hover {
+  background: var(--hh-surface-alt);
+}
+
+.status-option input[type="checkbox"] {
+  margin-right: 0.75rem;
+  cursor: pointer;
+}
+
+.status-option span {
+  flex: 1;
+}
+
+.configure-job-button {
+  padding: 0.75rem 1rem;
+  background: white;
+  color: var(--hh-ink);
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.configure-job-button:hover:not(:disabled) {
+  border-color: var(--hh-primary);
+  color: var(--hh-primary);
+}
+.configure-job-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sync-message {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.sync-message.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+}
+
+.sync-message.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
+/* Warning style for rate limiting */
+.sync-message.warning,
+.sync-message:not(.success):not(.error):not(.info) {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+
+/* ---- Layout: two tidy rows that wrap instead of overflowing ----
+   Row 1 narrows the list (job, search, status, views); row 2 holds the
+   actions. Every control shares one height so the rows read as aligned. */
+.applicants-filters {
+  --control-height: 2.75rem;
+  min-width: 0;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.job-filter {
+  flex: 0 1 260px;
+  min-width: 0;
+}
+
+.search-input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.status-filter-container {
+  flex: 0 1 220px;
+  min-width: 0;
+}
+
+.job-filter,
+.search-input,
+.status-filter-button,
+.configure-job-button,
+.applicants-filters .views-menu-button {
+  height: var(--control-height);
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 0.95rem;
+}
+
+.applicants-filters .views-menu-button {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-filter-button {
+  gap: 0.5rem;
+}
+
+.status-filter-button > span,
+.status-filter-button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-needed-pill {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: #fff3d6;
+  color: #7a4a00;
+  font-size: 0.72rem;
+  font-weight: 700;
+}

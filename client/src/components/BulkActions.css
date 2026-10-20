@@ -1,0 +1,511 @@
+.bulk-actions {
+  margin-bottom: 1.5rem;
+}
+
+.bulk-actions-buttons {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.bulk-action-button {
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bulk-action-button:hover:not(:disabled) {
+  border-color: var(--hh-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(31, 77, 58, 0.2);
+}
+
+.bulk-action-button.reject:hover:not(:disabled) {
+  border-color: #ef5350;
+  box-shadow: 0 2px 8px rgba(239, 83, 80, 0.25);
+  color: #c62828;
+}
+
+.bulk-action-button.duplicates:hover:not(:disabled) {
+  border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+  color: #92600a;
+}
+
+.bulk-push-transition {
+  font-size: 0.82rem;
+  color: var(--hh-muted);
+}
+
+.bulk-applicant-link {
+  color: var(--hh-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.bulk-applicant-link:hover {
+  text-decoration: underline;
+}
+
+.bulk-dup-groups {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+}
+
+.bulk-dup-group {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--hh-border);
+  font-size: 0.85rem;
+}
+
+.bulk-dup-group:last-child {
+  border-bottom: none;
+}
+
+.bulk-dup-name {
+  font-weight: 600;
+}
+
+.bulk-dup-reason {
+  color: #92600a;
+}
+
+.bulk-dup-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.bulk-dup-keep {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.bulk-dup-reject {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.bulk-action-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bulk-actions-hint {
+  font-size: 0.85rem;
+  color: var(--hh-subtle);
+}
+
+.bulk-actions-form {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: var(--hh-surface-alt);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.bulk-actions-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.bulk-actions-form-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.bulk-close-button {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--hh-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.bulk-close-button:hover {
+  background: var(--hh-border);
+}
+
+.bulk-condition-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bulk-condition-prefix {
+  font-weight: 600;
+  color: var(--hh-ink);
+}
+
+.bulk-select,
+.bulk-input {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.bulk-select:focus,
+.bulk-input:focus {
+  outline: none;
+  border-color: var(--hh-primary);
+  box-shadow: 0 0 0 3px rgba(31, 77, 58, 0.1);
+}
+
+.bulk-input[type='number'] {
+  width: 90px;
+}
+
+.bulk-note {
+  margin: 0.65rem 0 0;
+  font-size: 0.82rem;
+  color: #856404;
+}
+
+.bulk-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.bulk-status-label {
+  font-weight: 600;
+  color: var(--hh-ink);
+  min-width: 130px;
+}
+
+.bulk-status-select {
+  min-width: 240px;
+}
+
+.bulk-actions-controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.bulk-preview-button {
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 6px;
+  background: white;
+  color: var(--hh-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bulk-preview-button:hover:not(:disabled) {
+  background: rgba(31, 77, 58, 0.08);
+}
+
+.bulk-confirm-button {
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--hh-primary);
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bulk-confirm-button:hover:not(:disabled) {
+  background: var(--hh-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(31, 77, 58, 0.3);
+}
+
+.bulk-preview-button:disabled,
+.bulk-confirm-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bulk-preview {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+}
+
+.bulk-preview-count {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.bulk-preview-sample {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.88rem;
+  color: var(--hh-muted);
+}
+
+.bulk-preview-sample li {
+  padding: 0.1rem 0;
+}
+
+.bulk-preview-meta {
+  color: var(--hh-subtle);
+}
+
+.bulk-preview-more {
+  list-style: none;
+  margin-left: -1.25rem;
+  font-style: italic;
+  color: var(--hh-subtle);
+}
+
+.bulk-message {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.bulk-message.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+}
+
+.bulk-message.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
+.bulk-undo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-tint);
+  color: var(--hh-ink);
+}
+
+.bulk-undo-button {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--hh-primary);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: var(--hh-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bulk-undo-button:hover:not(:disabled) {
+  background: var(--hh-surface-alt);
+}
+
+.bulk-undo-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bulk-undo-dismiss {
+  margin-left: auto;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  color: var(--hh-muted);
+  cursor: pointer;
+}
+
+.bulk-confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #5c3b00;
+  font-size: 0.92rem;
+}
+
+.bulk-confirm-check input {
+  margin-top: 0.2rem;
+}
+
+/* Let the bulk buttons wrap rather than run past the content pane. */
+.bulk-actions-buttons {
+  flex-wrap: wrap;
+}
+
+/* ---- Action bar layout: dropdown + send button inline, panels full width ---- */
+.bulk-menu {
+  position: relative;
+}
+
+.bulk-action-button {
+  height: 2.75rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.bulk-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  padding: 0.35rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-surface);
+  box-shadow: var(--hh-shadow-md);
+}
+
+.bulk-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--hh-ink);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bulk-menu-item span {
+  color: var(--hh-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.bulk-menu-item:hover {
+  background: var(--hh-tint);
+}
+
+/* "Send to BambooHR" only appears while changes are waiting. It sits with the
+   other actions and is filled amber so unsent work is hard to miss. */
+.bulk-action-button.push {
+  border-color: #b87300;
+  background: #d98a00;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.bulk-action-button.push:hover:not(:disabled) {
+  border-color: #9a5f00;
+  background: #b87300;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(184, 115, 0, 0.35);
+}
+
+.bulk-actions-form {
+  margin-top: 0.25rem;
+}
+
+/* Inside the modal the form needs no card chrome of its own. */
+.bulk-actions-form {
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+/* Rolling back pending changes inside the send window */
+.bulk-rollback-button {
+  margin-left: 0.75rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: var(--hh-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.bulk-rollback-button:hover:not(:disabled) {
+  background: var(--hh-tint);
+}
+
+.bulk-rollback-button:disabled,
+.bulk-rollback-all:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.bulk-rollback-all {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  color: var(--hh-ink);
+  cursor: pointer;
+}
+
+.bulk-rollback-all:hover:not(:disabled) {
+  background: var(--hh-surface-alt);
+}
+
+.bulk-discard-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  color: #7a1c1c;
+  font-size: 0.92rem;
+}
+
+.bulk-rollback-confirm {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #b42318;
+  border-radius: 6px;
+  background: #b42318;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.bulk-rollback-cancel {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: var(--hh-surface);
+  cursor: pointer;
+}

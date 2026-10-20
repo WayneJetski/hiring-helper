@@ -1,0 +1,73 @@
+.row-actions-cell {
+  width: 1%;
+  padding-right: 0.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-actions-button {
+  padding: 0.35rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--hh-muted);
+  cursor: pointer;
+}
+
+.row-actions-button:hover,
+.row-actions-button[aria-expanded='true'] {
+  border-color: var(--hh-border);
+  background: var(--hh-surface-alt);
+  color: var(--hh-primary);
+}
+
+.row-actions-menu {
+  position: fixed;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  padding: 0.3rem;
+  border: 1px solid var(--hh-border);
+  border-radius: var(--hh-radius);
+  background: var(--hh-surface);
+  box-shadow: var(--hh-shadow-md);
+}
+
+.row-actions-item {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--hh-ink);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-actions-item:hover,
+.row-actions-item:focus-visible {
+  background: var(--hh-tint);
+}
+
+.row-actions-item.is-danger {
+  color: #b42318;
+}
+
+.row-actions-item.is-danger:hover,
+.row-actions-item.is-danger:focus-visible {
+  background: #fdecec;
+}
+
+.row-actions-divider {
+  height: 1px;
+  margin: 0.3rem 0.4rem;
+  background: var(--hh-border);
+}
+
+/* Pushes the "opens in a new tab" icon to the right edge of the item. */
+.row-actions-external {
+  margin-left: auto;
+  color: var(--hh-muted);
+}
