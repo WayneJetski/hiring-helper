@@ -25,6 +25,11 @@ node --import tsx server/src/mcp/index.ts
 
 (no build step needed). It calls `node` directly rather than `npm` because `npm` is `npm.cmd` on Windows, which Claude Code cannot spawn without a `cmd /c` wrapper. The project `.claude/settings.json` lists `hiring-helper` under `enabledMcpjsonServers` so headless scoring runs on a fresh machine do not wait for an interactive approval.
 
+### Checking the wiring
+`hiring-helper doctor` (or `npm run mcp:check --workspace=server` in a checkout) starts the server the way Claude Code does, using the command in `.mcp.json`, and confirms the tools scoring needs are there (`server/src/mcp/mcp-check.ts`). It also warns if `.claude/settings.json` does not pre-approve the server. `hiring-helper start` runs it after the app is up and prints a warning if it fails; CI runs it against a real install on macOS/Linux and Windows. The app itself works without the MCP server; only scoring needs it.
+
+The usual failure is `Connection closed` with a message about `NODE_MODULE_VERSION`: the app's packages were installed under one Node.js and Claude Code finds another first on `PATH` (common with nvm plus Homebrew). Run `npm rebuild better-sqlite3` with the Node.js you want, or keep a single Node.js first on `PATH`.
+
 ### Claude Desktop
 Add to your `claude_desktop_config.json`:
 

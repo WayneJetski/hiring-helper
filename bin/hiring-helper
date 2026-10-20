@@ -8,6 +8,7 @@
 #   hiring-helper open                               open it in the browser
 #   hiring-helper logs [-f]                          show (or follow) the log
 #   hiring-helper update [--check]                   download the latest version (or just look)
+#   hiring-helper doctor                             check that Claude can reach the scoring server
 
 set -euo pipefail
 
@@ -28,6 +29,7 @@ RUNTIME_DIR="$REPO_ROOT/.runtime"
 PID_FILE="$RUNTIME_DIR/server.pid"
 LOG_FILE="$RUNTIME_DIR/server.log"
 SERVER_JS="$REPO_ROOT/server/dist/index.js"
+MCP_CHECK_JS="$REPO_ROOT/server/dist/mcp/mcp-check.cli.js"
 MAX_LOG_BYTES=5242880
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -72,6 +74,13 @@ use_runtime_path() {
   [ -d "$RUNTIME_DIR/node/bin" ] && PATH="$RUNTIME_DIR/node/bin:$PATH"
   [ -d "$HOME/.local/bin" ] && PATH="$HOME/.local/bin:$PATH"
   export PATH
+}
+
+# Scoring runs through the MCP server, which the rest of the app never touches, so a broken
+# one would otherwise show up only at the first "Score new applicants" click.
+check_scoring_server() {
+  [ -f "$MCP_CHECK_JS" ] || die "The app is not built yet. Run: hiring-helper start"
+  (cd "$REPO_ROOT" && node "$MCP_CHECK_JS")
 }
 
 run_setup() { "$REPO_ROOT/scripts/launcher/setup.sh"; }
@@ -145,6 +154,11 @@ cmd_start() {
   fi
   printf 'Hiring Helper is running at %s\n' "$(server_url)"
   printf 'Stop it with: hiring-helper stop\n'
+  # Checked after the server is up: starting the MCP server opens the database, and the
+  # app's own start-up has to run any migrations first.
+  if ! check_scoring_server; then
+    printf 'The app works, but scoring will not until that is fixed. Check again with: hiring-helper doctor\n' >&2
+  fi
   [ "$no_open" = 1 ] || open_browser
 }
 
@@ -244,6 +258,12 @@ cmd_update() {
   fi
 }
 
+cmd_doctor() {
+  use_runtime_path
+  have node || die "Node.js was not found. Run: hiring-helper start"
+  check_scoring_server
+}
+
 usage() {
   cat <<'USAGE'
 Usage: hiring-helper <command>
@@ -256,6 +276,7 @@ Usage: hiring-helper <command>
   logs [-f]                          Show the log (-f keeps following it)
   update [--check]                   Download the latest version (and restart if it was running);
                                      --check only says whether one is available
+  doctor                             Check that Claude can reach the scoring server
 USAGE
 }
 
@@ -270,6 +291,7 @@ main() {
     open) cmd_open ;;
     logs) cmd_logs "$@" ;;
     update) cmd_update "$@" ;;
+    doctor) cmd_doctor ;;
     help|-h|--help) usage ;;
     *) usage >&2; exit 1 ;;
   esac
