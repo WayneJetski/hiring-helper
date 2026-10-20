@@ -79,8 +79,18 @@ export class ScoringController {
         res.status(409).json(blocked);
         return;
       }
-      const total = applicantQueryService.findUnscoredApplicants(scopeJobId).length;
-      res.json(scoringService.start({ jobId, total }));
+      const applicationIds = applicantQueryService
+        .findUnscoredApplicants(scopeJobId)
+        .map((applicant) => applicant.applicationId);
+      // Named ids let the service score them in batches, each in a fresh Claude session.
+      res.json(
+        scoringService.start({
+          jobId: scopeJobId,
+          applicationIds,
+          total: applicationIds.length,
+          isRescore: false,
+        })
+      );
     } catch (error) {
       console.error('Failed to start scoring:', error);
       res.status(500).json({

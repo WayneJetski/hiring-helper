@@ -198,3 +198,91 @@ test('cancel does nothing when no run is active', () => {
   const { service } = makeService();
   assert.equal(service.cancel(), false);
 });
+
+// ---- batching ----
+
+import { chunkIds, SCORING_BATCH_SIZE } from './scoring.service.js';
+
+/** A service whose every spawn returns a new fake child, so batches can be driven one by one. */
+function makeBatchingService(): { service: ScoringService; children: FakeChild[]; prompts: string[] } {
+  const children: FakeChild[] = [];
+  const prompts: string[] = [];
+  const spawnFn: SpawnFn = (_command, args) => {
+    const child = new FakeChild();
+    children.push(child);
+    prompts.push(args[1]);
+    return child as unknown as ChildProcess;
+  };
+  return { service: new ScoringService(spawnFn, fakeJobsRepo), children, prompts };
+}
+
+const saveCall = {
+  type: 'assistant',
+  message: { content: [{ type: 'tool_use', name: 'mcp__hiring-helper__save_evaluation' }] },
+};
+
+test('chunkIds splits into consecutive batches and keeps order', () => {
+  assert.deepEqual(chunkIds([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+  assert.deepEqual(chunkIds([], 2), []);
+  assert.equal(chunkIds(Array.from({ length: 30 }, (_, i) => i)).length, Math.ceil(30 / SCORING_BATCH_SIZE));
+});
+
+test('a long id list runs as sequential batches, each a fresh claude session', () => {
+  const { service, children, prompts } = makeBatchingService();
+  const ids = Array.from({ length: SCORING_BATCH_SIZE + 3 }, (_, i) => 1000 + i);
+  service.start({ jobId: 45, applicationIds: ids, total: ids.length, isRescore: false });
+
+  // Only the first batch is running.
+  assert.equal(children.length, 1);
+  assert.match(prompts[0], new RegExp(`these ${SCORING_BATCH_SIZE} application IDs`));
+  assert.match(prompts[0], /none has a score yet/);
+  assert.equal(prompts[0].includes(String(ids[SCORING_BATCH_SIZE])), false);
+
+  children[0].emitLine(saveCall);
+  children[0].emitLine({ type: 'result', is_error: false, result: 'batch one done' });
+
+  // The next batch started; the run as a whole is still going and progress carries over.
+  assert.equal(children.length, 2);
+  assert.equal(service.getStatus().running, true);
+  assert.equal(service.getStatus().scored, 1);
+  assert.match(prompts[1], /these 3 application IDs/);
+  assert.match(prompts[1], new RegExp(String(ids[SCORING_BATCH_SIZE])));
+
+  // The finished first child closing must not be mistaken for a crash of the second.
+  children[0].emit('close', 0);
+  assert.equal(service.getStatus().running, true);
+
+  children[1].emitLine(saveCall);
+  children[1].emitLine({ type: 'result', is_error: false, result: 'batch two done' });
+  const status = service.getStatus();
+  assert.equal(status.running, false);
+  assert.equal(status.ok, true);
+  assert.equal(status.scored, 2);
+  assert.match(status.message ?? '', /2 candidates in 2 batches/);
+});
+
+test('an error in one batch stops the remaining batches', () => {
+  const { service, children } = makeBatchingService();
+  const ids = Array.from({ length: SCORING_BATCH_SIZE * 2 }, (_, i) => i + 1);
+  service.start({ jobId: 45, applicationIds: ids });
+
+  children[0].emitLine({ type: 'result', is_error: true, result: 'boom' });
+
+  assert.equal(children.length, 1, 'no further batch is started');
+  const status = service.getStatus();
+  assert.equal(status.running, false);
+  assert.equal(status.ok, false);
+  assert.equal(status.error, 'boom');
+});
+
+test('cancelling mid-run does not start the remaining batches', () => {
+  const { service, children } = makeBatchingService();
+  const ids = Array.from({ length: SCORING_BATCH_SIZE * 2 }, (_, i) => i + 1);
+  service.start({ jobId: 45, applicationIds: ids });
+
+  assert.equal(service.cancel(), true);
+  children[0].emitLine({ type: 'result', is_error: false, result: 'late' });
+
+  assert.equal(children.length, 1);
+  assert.equal(service.getStatus().cancelled, true);
+});
