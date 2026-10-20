@@ -63,7 +63,7 @@ npx @modelcontextprotocol/inspector npm --silent run mcp --workspace=server
 | `list_statuses` | The hiring pipeline statuses (id + label). |
 | `list_unscored_applicants` | Active applications with no score yet — the scoring work queue. **Scoped to the current job when `jobId` is omitted.** |
 | `get_sync_status` | The most recent BambooHR sync (timestamp, type, count). |
-| `save_evaluation` | **Write:** persist a 0-100 confidence score + written summary for an application. |
+| `save_evaluation` | **Write:** persist a 0-100 fit score (`confidence`) + per-area `areaScores` (must cover every evaluation area and add up to the score; a mismatch is rejected) + written summary for an application. |
 | `save_job_posting` | **Write:** store the posting text (+ optional URL) for a job. Read back by `get_job_description` / `evaluate_candidate`; survives BambooHR syncs. |
 | `sync_from_bamboohr` | **Ingest:** pull applications from BambooHR (incremental; `force=true` for a full sync). |
 
@@ -90,7 +90,7 @@ The `/score-candidates` Claude Code skill runs this end to end. Manually, the fl
 2. `list_jobs` and pick the target job (default `currentJobId`).
 3. `get_job_description` for that job; if empty, `save_job_posting` with the posting text.
 4. `list_unscored_applicants` (scoped to the job) to see who needs scoring.
-5. For each candidate, run the `evaluate_candidate` prompt (or manually call `get_resume_text` + `get_job_description`), assess fit, then call `save_evaluation` with `applicationId`, `confidence` (0-100), `brief`, `full`, optional `risks`, and `suggestedScreeningQuestions`.
+5. For each candidate, run the `evaluate_candidate` prompt (or manually call `get_resume_text` + `get_job_description`), assess fit, then call `save_evaluation` with `applicationId`, `confidence` (0-100), `areaScores`, `brief`, `full`, optional `risks`, and `suggestedScreeningQuestions`.
 6. The score appears in the web app's applicant list (confidence column, scoped to the job) and the summary on the detail page — no regeneration button; the UI is read-only for assessments.
 
 ## Notes
