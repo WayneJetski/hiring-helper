@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCandidateLink } from './bamboohrLinks.js';
 
-test('builds the BambooHR candidate page link from the company address and candidate id', () => {
+test('builds the BambooHR candidate page link from the company address and application id', () => {
   assert.equal(
     buildCandidateLink('acme', 4821),
     'https://acme.bamboohr.com/hiring/candidates/4821'
@@ -22,7 +22,7 @@ test('returns null rather than a malformed link when the company address is miss
   }
 });
 
-test('returns null for a candidate id that is missing or not a positive whole number', () => {
+test('returns null for an application id that is missing or not a positive whole number', () => {
   for (const build of [buildCandidateLink]) {
     assert.equal(build('acme', undefined), null);
     assert.equal(build('acme', 0), null);

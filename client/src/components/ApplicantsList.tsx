@@ -224,7 +224,7 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
 
   // Grouped by intent: change the applicant, look at them, then share them.
   const handleCopyLink = async (applicant: ApplicantListItem): Promise<void> => {
-    const link = buildCandidateLink(bambooHRSubdomain, applicant.applicantId);
+    const link = buildCandidateLink(bambooHRSubdomain, applicant.id);
     if (!link) {
       setRowNotice({ text: 'Could not build the link. Sync with BambooHR and try again.' });
       return;

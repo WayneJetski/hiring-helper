@@ -143,7 +143,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
   }
 
   // Null until BambooHR is connected and synced, in which case the button is not shown.
-  const bambooHRLink = buildCandidateLink(bambooHRSubdomain, applicant.applicantId);
+  const bambooHRLink = buildCandidateLink(bambooHRSubdomain, applicant.id);
 
   return (
     <div className="applicant-detail">
