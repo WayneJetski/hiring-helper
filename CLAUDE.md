@@ -52,11 +52,11 @@ Two ways to run it besides `npm run dev`:
 
 ### Continuous integration
 
-`.github/workflows/ci.yml` runs on pushes to `main`/`master` and on pull requests:
-- **test**: build, lint and tests (server and client) on Ubuntu with Node 22 and 24 and on Windows with Node 22. The server test script uses a quoted glob, which needs Node 21+, so CI starts at Node 22.
+`.github/workflows/ci.yml` runs on pull requests into `main` (not on pushes):
+- **test**: build, lint and tests (server and client) on macOS with Node 22 and 24 and on Windows with Node 22. The server test script uses a quoted glob, which needs Node 21+, so CI starts at Node 22.
 - **launcher** ("Windows scripts parse"): parses `start.ps1`, `hiring-helper.ps1` and `install.ps1` with Windows PowerShell 5.1.
-- **installer-unix** / **installer-windows**: run the real installer against the commit under test (`HH_REPO_URL=file://...`, a `ci-install` branch), then start the app, hit `/health` and `/api/update/status`, run `update --check`, and stop it. `HH_SKIP_CLAUDE=1` keeps them unattended.
-- **hygiene**: fails if `package-lock.json` points at a non-public registry, if local data or `.env` files are tracked, if the Windows scripts contain non-ASCII characters, if a shell script does not parse (`bash -n`), or if one has lost its executable bit in git.
+- **installer-macos** / **installer-windows**: run the real installer against the commit under test (`HH_REPO_URL=file://...`, a `ci-install` branch), then start the app, hit `/health` and `/api/update/status`, run `update --check`, and stop it. `HH_SKIP_CLAUDE=1` keeps them unattended.
+- **hygiene** (runs on macOS, so use portable tools: no `grep -P`): fails if `package-lock.json` points at a non-public registry, if local data or `.env` files are tracked, if the Windows scripts contain non-ASCII characters, if a shell script does not parse (`bash -n`), or if one has lost its executable bit in git.
 
 To reproduce the test job locally: `npm ci && npm run build && npm run lint --workspace=server && npm run lint --workspace=client && npm run test --workspace=server && npm run test --workspace=client`.
 

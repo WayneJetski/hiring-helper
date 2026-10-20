@@ -1,9 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
+    branches: [main]
 
 # A newer push to the same branch or pull request makes the older run pointless.
 concurrency:
@@ -22,9 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, node: 22 }
-          - { os: ubuntu-latest, node: 24 }
-          # The app is installed on Windows, so keep Windows honest too.
+          - { os: macos-latest, node: 22 }
+          - { os: macos-latest, node: 24 }
+          # The app is supported on macOS and Windows only.
           - { os: windows-latest, node: 22 }
     steps:
       - uses: actions/checkout@v4
@@ -79,14 +78,10 @@ jobs:
           if ($failed) { exit 1 }
 
   # Runs the real installer against this commit, then starts, checks and stops the app.
-  installer-unix:
-    name: Installer smoke test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  installer-macos:
+    name: Installer smoke test (macOS)
+    runs-on: macos-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
     env:
       HH_YES: '1'
       HH_SKIP_CLAUDE: '1'
@@ -173,7 +168,7 @@ jobs:
   # Cheap guards for mistakes that are easy to make and expensive to publish.
   hygiene:
     name: Repository hygiene
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -197,7 +192,9 @@ jobs:
       # Windows PowerShell 5.1 misreads UTF-8 without a BOM, so the Windows scripts must stay ASCII.
       - name: Windows scripts are ASCII-only
         run: |
-          if grep -nP '[^\x00-\x7F]' start.bat bin/hiring-helper.cmd install.ps1 scripts/launcher/start.ps1 scripts/launcher/hiring-helper.ps1; then
+          offending=$(perl -ne 'print "$ARGV:$.: $_" if /[^\x00-\x7F]/' start.bat bin/hiring-helper.cmd install.ps1 scripts/launcher/start.ps1 scripts/launcher/hiring-helper.ps1)
+          if [ -n "$offending" ]; then
+            echo "$offending"
             echo "::error::The Windows scripts must contain only ASCII characters."
             exit 1
           fi
