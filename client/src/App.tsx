@@ -127,7 +127,10 @@ function AppContent(): JSX.Element {
             />
           }
         />
-        <Route path="/applicants/:id" element={<ApplicantDetail />} />
+        <Route
+          path="/applicants/:id"
+          element={<ApplicantDetail bambooHRSubdomain={setupStatus.bambooHR.subdomain} />}
+        />
         <Route
           path="/setup"
           element={

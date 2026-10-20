@@ -233,6 +233,7 @@ export class ApplicantQueryService {
 
     const detail: ApplicantDetail = {
       id: application.id,
+      applicantId: applicant.id,
       name: `${applicant.firstName} ${applicant.lastName}`.trim(),
       email: applicant.email,
       stage: this.statusLabel(application.statusId),

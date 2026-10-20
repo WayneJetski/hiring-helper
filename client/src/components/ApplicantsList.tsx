@@ -34,7 +34,7 @@ import {
   getConfidenceClass,
   getConfidenceLevel,
 } from '../utils/matchDisplay';
-import { buildCandidateLink, buildCandidateNotesLink } from '../utils/bamboohrLinks';
+import { buildCandidateLink } from '../utils/bamboohrLinks';
 import type { ListView } from '../utils/savedViews';
 import type { ApplicantListItem, JobSummary, SetupStatus, Status } from '../types/applicant.types';
 import './ApplicantsList.css';
@@ -222,16 +222,6 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     }
   };
 
-  // Notes live in BambooHR, so this opens the candidate's notes section there.
-  const handleOpenNotes = (applicant: ApplicantListItem): void => {
-    const link = buildCandidateNotesLink(bambooHRSubdomain, applicant.applicantId);
-    if (!link) {
-      setRowNotice({ text: 'Could not open the notes. Sync with BambooHR and try again.' });
-      return;
-    }
-    window.open(link, '_blank', 'noopener,noreferrer');
-  };
-
   // Grouped by intent: change the applicant, look at them, then share them.
   const handleCopyLink = async (applicant: ApplicantListItem): Promise<void> => {
     const link = buildCandidateLink(bambooHRSubdomain, applicant.applicantId);
@@ -259,12 +249,6 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
         icon: 'xCircle',
         isDanger: true,
         onSelect: () => setRowAction({ mode: 'reject', applicantId: applicant.id }),
-      },
-      {
-        label: 'Notes',
-        icon: 'messageSquare',
-        isExternal: true,
-        onSelect: () => handleOpenNotes(applicant),
       },
     ],
     [

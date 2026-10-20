@@ -42,7 +42,7 @@ const HELP_STEPS: Record<HelpPageKey, HelpStep[]> = {
     { id: 'match', title: 'Match', text: 'How well the résumé fits, 0 to 100. 75+ strong, 60 to 74 maybe.' },
     { id: 'flags', title: 'Flags', text: 'Worth a second look. Some jobs lower the score for them.' },
     { id: 'row', title: 'Applicant row', text: 'Click a row to open the applicant.' },
-    { id: 'row-menu', title: 'Row menu', text: 'Move, reject, or open in BambooHR.' },
+    { id: 'row-menu', title: 'Row menu', text: 'Move, reject, read the résumé, or copy a link.' },
   ],
   candidate: [
     { id: 'back', title: 'Breadcrumb', text: 'Back to the list, or to this job\'s applicants.' },
@@ -50,6 +50,7 @@ const HELP_STEPS: Record<HelpPageKey, HelpStep[]> = {
     { id: 'match', title: 'Match score', text: 'AI fit for this job. The assessment below says why.' },
     { id: 'stage', title: 'Move stage', text: 'Move this applicant to another stage.' },
     { id: 'resume', title: 'Résumé', text: 'Read the résumé.' },
+    { id: 'bamboohr', title: 'Open in BambooHR', text: 'Open this person in BambooHR, in a new tab.' },
     { id: 'assessment', title: 'AI assessment', text: 'Score, summary, and what to check.' },
   ],
 };

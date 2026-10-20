@@ -15,6 +15,7 @@ import { Icon } from './icons/Icon';
 import { RatingStars } from './icons/RatingStars';
 import type { Status } from '../types/applicant.types';
 import { getNeighbors, loadNavigationIds } from '../utils/applicantNavigation';
+import { buildCandidateLink } from '../utils/bamboohrLinks';
 import { saveSelectedJobId } from '../utils/filterStorage';
 import {
   FLAG_DISPLAY,
@@ -24,7 +25,11 @@ import {
 } from '../utils/matchDisplay';
 import './ApplicantDetail.css';
 
-export function ApplicantDetail(): JSX.Element {
+interface ApplicantDetailProps {
+  bambooHRSubdomain: string | null;
+}
+
+export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const applicantId = id ? parseInt(id, 10) : null;
@@ -137,6 +142,9 @@ export function ApplicantDetail(): JSX.Element {
     );
   }
 
+  // Null until BambooHR is connected and synced, in which case the button is not shown.
+  const bambooHRLink = buildCandidateLink(bambooHRSubdomain, applicant.applicantId);
+
   return (
     <div className="applicant-detail">
       <div className="detail-topbar">
@@ -220,16 +228,30 @@ export function ApplicantDetail(): JSX.Element {
           </div>
 
           <div className="header-actions">
-            {applicant.resumeFileId && (
-              <button
-                type="button"
-                className="resume-button"
-                onClick={() => setIsResumeOpen(true)}
-                data-help="resume"
-              >
-                <Icon name="fileText" /> View résumé
-              </button>
-            )}
+            <div className="header-buttons">
+              {applicant.resumeFileId && (
+                <button
+                  type="button"
+                  className="resume-button"
+                  onClick={() => setIsResumeOpen(true)}
+                  data-help="resume"
+                >
+                  <Icon name="fileText" /> View résumé
+                </button>
+              )}
+              {bambooHRLink && (
+                <a
+                  className="resume-button"
+                  href={bambooHRLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Opens in a new tab"
+                  data-help="bamboohr"
+                >
+                  <Icon name="externalLink" /> Open in BambooHR
+                </a>
+              )}
+            </div>
             <StageMover
               key={applicant.id}
               applicantId={applicant.id}

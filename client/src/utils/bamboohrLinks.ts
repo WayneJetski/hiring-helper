@@ -1,6 +1,6 @@
 /**
  * Links into BambooHR's own web app, for sharing a candidate internally or
- * jumping to their notes. Anyone opening them needs their own BambooHR access.
+ * opening them. Anyone opening them needs their own BambooHR access.
  */
 
 /** Same shape the server accepts for a BambooHR company address. */
@@ -27,13 +27,4 @@ export function buildCandidateLink(
     return null;
   }
   return `https://${company}.bamboohr.com/hiring/candidates/${candidateId}`;
-}
-
-/** The same page, scrolled to the candidate's notes section. */
-export function buildCandidateNotesLink(
-  subdomain: string | null | undefined,
-  candidateId: number | null | undefined
-): string | null {
-  const link = buildCandidateLink(subdomain, candidateId);
-  return link === null ? null : `${link}#ats-notes`;
 }
