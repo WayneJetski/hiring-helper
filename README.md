@@ -75,6 +75,7 @@ Running the installer again on the same folder updates that install instead of m
 | `hiring-helper open` | Open it in the browser |
 | `hiring-helper logs` | Show the end of the log (`-f` keeps following it) |
 | `hiring-helper update` | Download the latest version, and restart if it was running (`--check` only says whether one exists) |
+| `hiring-helper doctor` | Check that Claude can start the scoring server (`start` runs this too and warns if it fails) |
 
 Open a new terminal after installing so the command is on your PATH. On the first start, sign in to Claude from the app's setup page (the badge at the top right) so scoring works.
 

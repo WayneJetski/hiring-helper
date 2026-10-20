@@ -10,6 +10,7 @@
     "start": "node dist/index.js",
     "mcp": "tsx src/mcp/index.ts",
     "mcp:start": "node dist/mcp/index.js",
+    "mcp:check": "node dist/mcp/mcp-check.cli.js",
     "lint": "eslint src --ext .ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },

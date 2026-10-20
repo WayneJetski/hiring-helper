@@ -7,6 +7,7 @@
 #   hiring-helper open                               open it in the browser
 #   hiring-helper logs [-f]                          show (or follow) the log
 #   hiring-helper update [--check]                   download the latest version (or just look)
+#   hiring-helper doctor                             check that Claude can reach the scoring server
 #
 # Reached through bin\hiring-helper.cmd. Keep this file ASCII-only: Windows
 # PowerShell 5.1 misreads UTF-8 without a BOM.
@@ -20,6 +21,7 @@ $PidFile = Join-Path $RuntimeDir 'server.pid'
 $LogFile = Join-Path $RuntimeDir 'server.log'
 $ErrorLogFile = Join-Path $RuntimeDir 'server.err.log'
 $ServerJs = Join-Path $RepoRoot 'server\dist\index.js'
+$McpCheckJs = Join-Path $RepoRoot 'server\dist\mcp\mcp-check.cli.js'
 
 function Get-ServerUrl { return "http://localhost:$(Get-ServerPort)" }
 
@@ -82,6 +84,23 @@ function Stop-HiringHelper {
     Write-Host 'Hiring Helper stopped.'
 }
 
+# Scoring runs through the MCP server, which the rest of the app never touches, so a broken
+# one would otherwise show up only at the first "Score new applicants" click.
+function Test-ScoringServer {
+    if (-not (Test-Path $McpCheckJs)) { throw 'The app is not built yet. Run: hiring-helper start' }
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'   # native stderr must not throw in Windows PowerShell 5.1
+    Push-Location $RepoRoot
+    try {
+        & node $McpCheckJs
+        return ($LASTEXITCODE -eq 0)
+    }
+    finally {
+        Pop-Location
+        $ErrorActionPreference = $previousPreference
+    }
+}
+
 function Start-HiringHelperService([string[]]$Options, [switch]$SkipSetup) {
     $foreground = $Options -contains '--foreground'
     $noOpen = ($Options -contains '--no-open') -or ($env:HH_NO_BROWSER -eq '1')
@@ -127,6 +146,11 @@ function Start-HiringHelperService([string[]]$Options, [switch]$SkipSetup) {
     }
     Write-Host "Hiring Helper is running at $(Get-ServerUrl)"
     Write-Host 'Stop it with: hiring-helper stop'
+    # Checked after the server is up: starting the MCP server opens the database, and the
+    # app's own start-up has to run any migrations first.
+    if (-not (Test-ScoringServer)) {
+        Write-Host 'The app works, but scoring will not until that is fixed. Check again with: hiring-helper doctor' -ForegroundColor Yellow
+    }
     if (-not $noOpen) { Open-Browser }
 }
 
@@ -208,6 +232,11 @@ function Update-HiringHelper([string[]]$Options) {
     }
 }
 
+function Invoke-Doctor {
+    Add-ToPath $LocalNodeDir
+    if (-not (Test-ScoringServer)) { exit 1 }
+}
+
 function Show-Usage {
     Write-Host @'
 Usage: hiring-helper <command>
@@ -220,6 +249,7 @@ Usage: hiring-helper <command>
   logs [-f]                          Show the log (-f keeps following it)
   update [--check]                   Download the latest version (and restart if it was running);
                                      --check only says whether one is available
+  doctor                             Check that Claude can reach the scoring server
 '@
 }
 
@@ -238,6 +268,7 @@ try {
         }
         'logs' { Show-Logs $options }
         'update' { Update-HiringHelper $options }
+        'doctor' { Invoke-Doctor }
         { $_ -in 'help', '-h', '--help' } { Show-Usage }
         default { Show-Usage; exit 1 }
     }

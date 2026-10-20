@@ -115,6 +115,7 @@ jobs:
           curl -fsS "http://127.0.0.1:28417/health"
           curl -fsS "http://127.0.0.1:28417/api/update/status"
           "$HH_DIR/bin/hiring-helper" update --check
+          "$HH_DIR/bin/hiring-helper" doctor
           "$HH_DIR/bin/hiring-helper" stop
 
       - name: Show the log if something failed
@@ -155,6 +156,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'start failed' }
           & $command status
           Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:28417/health' | Out-Null
+          & $command doctor
+          if ($LASTEXITCODE -ne 0) { throw 'doctor failed: Claude cannot reach the scoring server' }
           & $command stop
 
       - name: Show the log if something failed
