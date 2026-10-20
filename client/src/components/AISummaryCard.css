@@ -43,6 +43,7 @@
 
 .summary-brief,
 .summary-full,
+.summary-areas,
 .summary-risks,
 .summary-questions {
   background: white;
@@ -62,6 +63,7 @@
 
 .summary-brief h4,
 .summary-full h4,
+.summary-areas h4,
 .summary-risks h4,
 .summary-questions h4 {
   margin: 0 0 0.75rem 0;
@@ -256,4 +258,39 @@
   background: var(--hh-surface-alt);
   font-size: 0.88rem;
   color: var(--hh-muted);
+}
+
+.area-score-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.area-score {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.75rem;
+  line-height: 1.4;
+  color: var(--hh-ink);
+}
+
+.area-score-points {
+  color: var(--hh-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.area-score-bar {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--hh-surface-alt, #eef0f3);
+  overflow: hidden;
+}
+
+.area-score-fill {
+  display: block;
+  height: 100%;
+  background: var(--hh-primary, #2563eb);
 }

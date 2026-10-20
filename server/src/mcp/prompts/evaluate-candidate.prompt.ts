@@ -72,7 +72,7 @@ export function registerEvaluateCandidatePrompt(server: McpServer, deps: McpDeps
         '==============',
         '',
         `When finished, call the save_evaluation tool with applicationId=${applicationId}, your confidence ` +
-          '(integer 0-100), a brief summary, a full assessment, any risks, suggested screening questions, and ' +
+          '(the fit score, integer 0-100), areaScores (points for every evaluation area, adding up to the confidence), a brief summary, a full assessment, any risks, suggested screening questions, and ' +
           "flags (only those listed under 'Flags to pass to save_evaluation' above, else []).",
       ].join('\n');
 

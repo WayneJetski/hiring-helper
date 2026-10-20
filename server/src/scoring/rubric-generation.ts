@@ -53,13 +53,13 @@ export const EXAMPLE_CRITERIA = {
   dimensions: [
     {
       name: 'Core Technical Skills',
-      maxPoints: 30,
+      maxPoints: 35,
       guidance:
         'Hands-on proficiency in the tools, languages or methods the posting names as required\nRecent use (last 2 to 3 years), not just a keyword in a skills list\nConcrete projects or results that show the skill applied',
     },
     {
       name: 'Relevant Experience & Seniority',
-      maxPoints: 25,
+      maxPoints: 30,
       guidance:
         'Level of responsibility matches the role (scope, team size, autonomy)\nTime spent in comparable roles or environments\nProgression over time rather than repeated lateral moves',
     },
@@ -71,19 +71,19 @@ export const EXAMPLE_CRITERIA = {
     },
     {
       name: 'Communication & Collaboration',
-      maxPoints: 10,
+      maxPoints: 8,
       guidance:
         'Evidence of working with other teams or stakeholders\nClear, well-organized writing in the résumé and cover letter\nMentoring, presenting or documentation work',
     },
     {
       name: 'Motivation & Role Fit',
-      maxPoints: 10,
+      maxPoints: 4,
       guidance:
         'Interest in this domain shown by career choices, not slogans\nCareer direction consistent with this role',
     },
     {
       name: 'Résumé Quality',
-      maxPoints: 5,
+      maxPoints: 3,
       guidance: 'Clear structure, consistent formatting and accurate details',
     },
   ],
@@ -308,10 +308,16 @@ export function buildCriteriaPrompt(
 
   lines.push(
     'Rules:',
-    `- Use between 4 and 7 evaluation areas. The maxPoints are whole numbers that total exactly ${TOTAL_POINTS}.`,
+    `- Use between 4 and 6 evaluation areas. The maxPoints are whole numbers that total exactly ${TOTAL_POINTS}.`,
     '- Give more points to what matters most for this role. Do not spread points evenly out of caution.',
-    '- Name each area in a few words. Give each 2 to 4 short guidance lines naming observable evidence in a résumé (what to look for, and what to discount where relevant), not generic virtues.',
-    '- Base the areas on the posting itself: its required skills, responsibilities and seniority.',
+    '- Name each area in a few words. Give each 2 to 4 short guidance lines naming observable evidence in a résumé (what to look for, and what counts only partially), not generic virtues.',
+    '- Base the areas on the posting itself: its required skills, responsibilities and seniority. Give required items more weight than preferred ones.',
+    '- Keep soft areas (culture, motivation, communication, résumé presentation) small, about 15 points together at most: a résumé shows little about them, so they separate candidates poorly.',
+    '- Write guidance as what earns credit. Do not write harsh deductions; partial or adjacent experience should still earn partial points.',
+    '- Guidance lines are alternative ways to earn points, not a checklist. A candidate who shows some of the lines should earn a solid share of the area, and full marks should not need every line. A solid, well-matched candidate should be able to earn roughly 70 to 85 percent of each area.',
+    '- Treat named tools, methods and employers as examples ("such as"), not requirements: a comparable tool or situation earns credit.',
+    '- Keep the areas independent. Do not make several areas reward the same evidence (for example, working with product managers in three places), because one missing background would then cost points in each of them. Merge areas that look for the same thing.',
+    '- Do not turn every bullet of the posting into its own area; group related requirements and weight the groups.',
     '- Do NOT make areas for these, because they are handled separately as flags: location, name capitalization, being a student, lack of relevant experience, short job tenures or gaps.',
     '',
     'Here is an example of the expected shape and level of detail for a different role. Do not copy its areas; match its quality:',

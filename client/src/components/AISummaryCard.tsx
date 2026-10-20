@@ -85,6 +85,28 @@ export function AISummaryCard({ summary }: AISummaryCardProps): JSX.Element {
         <p>{summary.full}</p>
       </div>
 
+      {summary.areaScores && summary.areaScores.length > 0 && (
+        <div className="summary-areas">
+          <h4>Score Breakdown</h4>
+          <ul className="area-score-list">
+            {summary.areaScores.map((area) => (
+              <li key={area.name} className="area-score">
+                <span className="area-score-name">{area.name}</span>
+                <span className="area-score-points">
+                  {area.points} / {area.maxPoints}
+                </span>
+                <span className="area-score-bar" aria-hidden="true">
+                  <span
+                    className="area-score-fill"
+                    style={{ width: `${Math.round((area.points / area.maxPoints) * 100)}%` }}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {summary.risks && (
         <div className="summary-risks">
           <h4 className="summary-heading">

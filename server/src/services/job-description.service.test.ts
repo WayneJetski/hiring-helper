@@ -47,7 +47,7 @@ function serviceWith(job: FakeJob | null): {
 test('a job with no saved criteria is scored on the default criteria', async () => {
   const { service } = serviceWith({});
   const prompt = await service.getSystemPrompt(1);
-  assert.match(prompt, /1\. Technical Skill Alignment \(0–30\)/);
+  assert.match(prompt, /1\. Technical Skill Alignment \(0–35\)/);
   assert.match(prompt, /\{\{JOB_TITLE\}\}/, 'job placeholders are left for the caller');
   assert.deepEqual(
     { isCustom: service.getScoringConfig(1).isCustom, legacy: service.getScoringConfig(1).isLegacyPromptActive },

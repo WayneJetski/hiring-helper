@@ -76,9 +76,9 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     {
       id: 'technical',
       name: 'Technical Skill Alignment',
-      maxPoints: 30,
+      maxPoints: 35,
       guidance:
-        'Proficiency and recency in required languages, frameworks, and technologies\nEvidence of applied expertise through projects or measurable accomplishments',
+        'Proficiency and recency in the languages, frameworks, and technologies the posting requires (preferred ones count for less)\nEvidence of applied expertise through projects or measurable accomplishments',
     },
     {
       id: 'role',
@@ -90,22 +90,22 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     {
       id: 'impact',
       name: 'Problem-Solving & Impact',
-      maxPoints: 15,
+      maxPoints: 20,
       guidance:
         'Ownership, measurable results, system improvements, or complex problem resolution',
     },
     {
       id: 'culture',
       name: 'Cultural & Motivational Fit',
-      maxPoints: 10,
-      guidance: 'Communication, enthusiasm, and alignment with company mission and values',
+      maxPoints: 5,
+      guidance:
+        'Communication and motivation shown by career choices and how the experience is described, not by slogans (a résumé rarely shows more; no signal either way is a middling score)',
     },
     {
       id: 'presentation',
       name: 'Professional Presentation',
-      maxPoints: 15,
-      guidance:
-        "Resume/cover letter clarity, grammar, structure, and reliability indicators\nCorrect, consistent capitalization of the candidate's own name and text (an attention-to-detail signal)",
+      maxPoints: 10,
+      guidance: 'Resume/cover letter clarity, grammar, structure, and reliability indicators',
     },
   ],
   redFlags: {
@@ -310,7 +310,7 @@ function evaluationFrameworkSection(dimensions: ScoringDimension[]): string {
   });
   return [
     '### Evaluation Framework',
-    `Assess the candidate across ${count} weighted area${dimensions.length === 1 ? '' : 's'}, be precise and strict when measuring these scores, not approximate, not rounded:`,
+    `Assess the candidate across ${count} weighted area${dimensions.length === 1 ? '' : 's'}. The number in brackets is the most points that area can earn; the points you give must add up to the fit score:`,
     '',
     areas.join('\n'),
   ].join('\n');
