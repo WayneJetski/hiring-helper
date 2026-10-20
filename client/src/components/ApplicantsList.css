@@ -1,7 +1,8 @@
 .applicants-list {
   max-width: var(--hh-page-width);
   margin: 0 auto;
-  padding: 2rem;
+  /* No top padding: .main-content already supplies the space above the header. */
+  padding: 0 2rem 2rem;
 }
 
 .header {
@@ -339,7 +340,7 @@
 /* Responsive design */
 @media (max-width: 768px) {
   .applicants-list {
-    padding: 1rem;
+    padding: 0 1rem 1rem;
   }
 
   .filters {
