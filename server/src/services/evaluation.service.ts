@@ -12,6 +12,7 @@ import { JobsRepository } from '../repositories/jobs.repository.js';
 import { ApplicationFlagsRepository } from '../repositories/application-flags.repository.js';
 import { JobDescriptionService } from './job-description.service.js';
 import { applyFlagPenalties } from '../scoring/flag-penalties.js';
+import { validateAreaScores, type AreaScoreInput, type AreaScore } from '../scoring/area-scores.js';
 import { deriveSalaryFlags, reconcileSalaryFlags } from '../scoring/salary.js';
 import type { ApplicantSummary } from '../types/summary.types.js';
 import { mergeScoringFlags, type ApplicationFlag } from '../types/flags.js';
@@ -25,27 +26,40 @@ export interface EvaluationInput {
   full: string;
   risks?: string;
   suggestedScreeningQuestions?: string[];
+  /** Points given to each evaluation area; must cover every area and add up to `confidence`.
+   *  Ignored for a job still scored on a legacy hand-written rubric (its areas are not known). */
+  areaScores?: AreaScoreInput[];
   /** Flags this evaluation judged (name / location / studying / no_exp / tenure). When
    *  provided, replaces the scoring-managed flags but preserves answer-derived
    *  salary flags; when omitted, all existing flags are left untouched. */
   flags?: ApplicationFlag[];
 }
 
-export class EvaluationService {
-  private summaryRepo: ApplicationSummaryRepository;
-  private scoresRepo: ScoresRepository;
-  private applicationsRepo: ApplicationsRepository;
-  private jobsRepo: JobsRepository;
-  private flagsRepo: ApplicationFlagsRepository;
-  private jobDescriptionService: JobDescriptionService;
+/** What the service reads and writes; injectable so tests need no database or disk. */
+export interface EvaluationDependencies {
+  summaryRepo: Pick<ApplicationSummaryRepository, 'saveSummary' | 'getSummary'>;
+  scoresRepo: Pick<ScoresRepository, 'setScore'>;
+  applicationsRepo: Pick<ApplicationsRepository, 'getById'>;
+  jobsRepo: Pick<JobsRepository, 'getById'>;
+  flagsRepo: Pick<ApplicationFlagsRepository, 'getFlags' | 'setFlags'>;
+  jobDescriptionService: Pick<JobDescriptionService, 'getScoringConfig'>;
+}
 
-  constructor() {
-    this.summaryRepo = new ApplicationSummaryRepository();
-    this.scoresRepo = new ScoresRepository();
-    this.applicationsRepo = new ApplicationsRepository();
-    this.jobsRepo = new JobsRepository();
-    this.flagsRepo = new ApplicationFlagsRepository();
-    this.jobDescriptionService = new JobDescriptionService();
+export class EvaluationService {
+  private summaryRepo: EvaluationDependencies['summaryRepo'];
+  private scoresRepo: EvaluationDependencies['scoresRepo'];
+  private applicationsRepo: EvaluationDependencies['applicationsRepo'];
+  private jobsRepo: EvaluationDependencies['jobsRepo'];
+  private flagsRepo: EvaluationDependencies['flagsRepo'];
+  private jobDescriptionService: EvaluationDependencies['jobDescriptionService'];
+
+  constructor(dependencies: Partial<EvaluationDependencies> = {}) {
+    this.summaryRepo = dependencies.summaryRepo ?? new ApplicationSummaryRepository();
+    this.scoresRepo = dependencies.scoresRepo ?? new ScoresRepository();
+    this.applicationsRepo = dependencies.applicationsRepo ?? new ApplicationsRepository();
+    this.jobsRepo = dependencies.jobsRepo ?? new JobsRepository();
+    this.flagsRepo = dependencies.flagsRepo ?? new ApplicationFlagsRepository();
+    this.jobDescriptionService = dependencies.jobDescriptionService ?? new JobDescriptionService();
   }
 
   /**
@@ -76,7 +90,16 @@ export class EvaluationService {
 
     const job = this.jobsRepo.getById(application.jobId);
 
-    const { config } = this.jobDescriptionService.getScoringConfig(application.jobId);
+    const { config, isLegacyPromptActive } = this.jobDescriptionService.getScoringConfig(
+      application.jobId
+    );
+
+    let areaScores: AreaScore[] | undefined;
+    if (input.areaScores !== undefined && !isLegacyPromptActive) {
+      const checked = validateAreaScores(input.areaScores, config.dimensions, input.confidence);
+      if (!checked.ok) throw new Error(checked.error);
+      areaScores = checked.areaScores;
+    }
     // Desired pay is checked by the app, from the stored application answer.
     const salaryFlags = deriveSalaryFlags(application.desiredSalary, config.redFlags);
     const { score, appliedPenalties } = applyFlagPenalties(
@@ -94,6 +117,7 @@ export class EvaluationService {
       generatedAt: new Date().toISOString(),
       jobTitle: job?.title,
       jobId: job?.id,
+      ...(areaScores && { areaScores }),
       ...(appliedPenalties.length > 0 && {
         scoreAdjustment: { meritScore: input.confidence, penalties: appliedPenalties },
       }),

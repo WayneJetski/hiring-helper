@@ -12,6 +12,7 @@ export function registerWriteTools(server: McpServer, deps: McpDeps): void {
   registerTool<{
     applicationId: number;
     confidence: number;
+    areaScores?: { name: string; points: number }[];
     brief: string;
     full: string;
     risks?: string;
@@ -23,8 +24,8 @@ export function registerWriteTools(server: McpServer, deps: McpDeps): void {
     {
       title: 'Save candidate evaluation',
       description:
-        'Persist an evaluation for an application: writes the 0-100 confidence score to the database and ' +
-        'caches the written summary. Use after reading the resume and job description. Overwrites any existing evaluation. ' +
+        'Persist an evaluation for an application: writes the 0-100 fit score (`confidence`) to the database and ' +
+        'caches the written summary. Pass `areaScores` (the points you gave each evaluation area, which must add up to `confidence`) so the score can be audited. Use after reading the resume and job description. Overwrites any existing evaluation. ' +
         'Set `flags` to the flags you observed (still give a real merit score; never adjust it for a flag, the app applies any configured flag penalty itself and returns the final score). ' +
         "Pass only flags your scoring instructions list under 'Flags to pass to save_evaluation': " +
         "'name' (improper name capitalization), 'location' (not confirmed to be in the role's area), " +
@@ -32,7 +33,23 @@ export function registerWriteTools(server: McpServer, deps: McpDeps): void {
         'Pass every flag that applies, or [] for none. (Salary flags are managed separately and preserved.)',
       inputSchema: {
         applicationId: z.number().int().describe('The application ID being evaluated'),
-        confidence: z.number().int().min(0).max(100).describe('Overall fit confidence, 0-100'),
+        confidence: z
+          .number()
+          .int()
+          .min(0)
+          .max(100)
+          .describe('Overall fit score, 0-100: the sum of the points given to each evaluation area'),
+        areaScores: z
+          .array(
+            z.object({
+              name: z.string().describe("The evaluation area's name, exactly as in the scoring instructions"),
+              points: z.number().int().min(0).describe('Points given, from 0 up to that area’s maximum'),
+            })
+          )
+          .optional()
+          .describe(
+            'Points for every evaluation area, named exactly as in the scoring instructions. They must add up to `confidence`; a mismatch is rejected so you can correct it.'
+          ),
         brief: z.string().describe('One or two sentence summary of the candidate'),
         full: z.string().describe('Detailed assessment of fit for the role'),
         risks: z.string().optional().describe('Potential concerns or gaps'),
@@ -52,6 +69,7 @@ export function registerWriteTools(server: McpServer, deps: McpDeps): void {
       try {
         const summary = await deps.evaluation.saveEvaluation(args.applicationId, {
           confidence: args.confidence,
+          areaScores: args.areaScores,
           brief: args.brief,
           full: args.full,
           risks: args.risks,

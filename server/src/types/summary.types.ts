@@ -11,6 +11,8 @@ export interface ApplicantSummary {
   generatedAt: string;
   jobTitle?: string;
   jobId?: number;
+  /** Points given to each evaluation area (they add up to the model's merit score). */
+  areaScores?: Array<{ name: string; points: number; maxPoints: number }>;
   /** Present when red-flag penalties lowered the score: the model's merit score and what applied. */
   scoreAdjustment?: {
     meritScore: number;

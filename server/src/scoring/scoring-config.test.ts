@@ -33,7 +33,7 @@ test('the default configuration is valid and totals 100 points', () => {
 
 test('points that do not total 100 are rejected with a plain-language message', () => {
   const config = cloneDefaultScoringConfig();
-  config.dimensions[0].maxPoints = 40; // total becomes 110
+  config.dimensions[0].maxPoints = 45; // total becomes 110
   const result = validateScoringConfig(config);
   assert.equal(result.ok, false);
   assert.match(!result.ok ? result.error : '', /add up to 110.*exactly 100/);
@@ -79,8 +79,8 @@ test('rejects non-object input and an empty list of areas', () => {
 
 test('composes the default rubric with every area, weight and flag', () => {
   const rubric = composeRubric(TEMPLATE, DEFAULT_SCORING_CONFIG);
-  assert.match(rubric, /1\. Technical Skill Alignment \(0–30\)/);
-  assert.match(rubric, /5\. Professional Presentation \(0–15\)/);
+  assert.match(rubric, /1\. Technical Skill Alignment \(0–35\)/);
+  assert.match(rubric, /5\. Professional Presentation \(0–10\)/);
   assert.match(rubric, /Name capitalization/);
   assert.match(rubric, /Still studying \(`studying`\)/);
   assert.match(rubric, /Short tenures or gaps \(`tenure`\)/);
@@ -360,4 +360,29 @@ test('the pay checks are not part of the rubric the model sees', () => {
   config.redFlags.salaryLow = { enabled: true, penalty: 'lot', threshold: 100000 };
   const rubric = composeRubric(TEMPLATE, config);
   assert.equal(/salary|desired pay/i.test(rubric.split('### Red Flags')[1] ?? ''), false);
+});
+
+// ---- template calibration ----
+
+test('the composed rubric teaches calibration and evidence-first scoring, not strictness', () => {
+  const rubric = composeRubric(TEMPLATE, DEFAULT_SCORING_CONFIG);
+  assert.match(rubric, /Find the evidence first/);
+  assert.match(rubric, /Missing evidence is not negative evidence/);
+  assert.match(rubric, /meets all of the posting's requirements[^.]*75-85/);
+  assert.match(rubric, /requires more heavily than[^.]*preferred/i);
+  assert.equal(/strict/i.test(rubric), false, 'strictness wording pushes every score down');
+});
+
+test('the rubric asks for the save_evaluation tool with a per-area breakdown, not a JSON reply', () => {
+  const rubric = composeRubric(TEMPLATE, DEFAULT_SCORING_CONFIG);
+  assert.match(rubric, /`save_evaluation`/);
+  assert.match(rubric, /`areaScores`/);
+  assert.equal(rubric.includes('Respond **ONLY** with valid JSON'), false);
+});
+
+test('the default criteria keep the soft areas small and leave name capitalization to its flag', () => {
+  const soft = DEFAULT_SCORING_CONFIG.dimensions.filter((d) => ['culture', 'presentation'].includes(d.id));
+  assert.ok(soft.reduce((sum, d) => sum + d.maxPoints, 0) <= 15);
+  const presentation = DEFAULT_SCORING_CONFIG.dimensions.find((d) => d.id === 'presentation');
+  assert.equal(/capitalization/i.test(presentation?.guidance ?? ''), false, 'the name flag already covers it');
 });

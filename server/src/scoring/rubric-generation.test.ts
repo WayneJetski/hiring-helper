@@ -170,3 +170,22 @@ test('a very long posting is truncated in the prompt', () => {
   const long = { title: 'X', description: 'word '.repeat(10000) };
   assert.match(buildCriteriaPrompt(long), /\[posting truncated\]/);
 });
+
+test('the example criteria keep soft areas small so they are not over-weighted', () => {
+  const soft = EXAMPLE_CRITERIA.dimensions.filter((d) =>
+    /communication|motivation|résumé/i.test(d.name)
+  );
+  assert.equal(soft.length, 3);
+  assert.ok(soft.reduce((sum, d) => sum + d.maxPoints, 0) <= 15);
+  assert.equal(EXAMPLE_CRITERIA.dimensions.reduce((sum, d) => sum + d.maxPoints, 0), 100);
+});
+
+test('the criteria prompt asks for alternative evidence, independent areas and no harsh deductions', () => {
+  const prompt = buildCriteriaPrompt(job);
+  assert.match(prompt, /alternative ways to earn points, not a checklist/);
+  assert.match(prompt, /named tools[^.]*examples/);
+  assert.match(prompt, /Keep the areas independent/);
+  assert.match(prompt, /Do not write harsh deductions/);
+  assert.equal(/what to discount/.test(prompt), false);
+  assert.match(prompt, /between 4 and 6 evaluation areas/);
+});
