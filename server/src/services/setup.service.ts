@@ -3,7 +3,8 @@
  *
  * Backs the first-run setup screen: reports whether BambooHR is connected and
  * Claude Code is installed, tests BambooHR credentials without saving them, and
- * saves them to the root .env (and in memory, so no restart is needed).
+ * saves them (the key to the OS credential store, the company address to the root .env)
+ * and in memory, so no restart is needed.
  *
  * The API key is never returned or logged.
  */
@@ -17,6 +18,12 @@ import {
   isBambooHRConfigured,
   setBambooHRCredentials,
 } from '../config/env.config.js';
+import {
+  KeychainCredentialStore,
+  forgetApiKey,
+  storeApiKey,
+  type CredentialStore,
+} from '../config/credential-store.js';
 import { buildBambooHRError, classifyBambooHRFailure } from '../errors/bamboohr-failure.js';
 import { writePrivateFile } from '../utils/private-file.js';
 import { upsertEnvLines } from '../utils/env-file.js';
@@ -94,13 +101,19 @@ export class SetupService {
   private readonly connectionTester: ConnectionTester | null;
   private readonly now: () => number;
   private readonly claudeAuth: ClaudeAuthService;
+  private readonly credentialStore: CredentialStore;
+  private readonly envFilePath: string;
 
   constructor(
     versionRunner: VersionRunner = runClaudeVersion,
     connectionTester: ConnectionTester | null = null,
     now: () => number = Date.now,
-    claudeAuth: ClaudeAuthService = new ClaudeAuthService()
+    claudeAuth: ClaudeAuthService = new ClaudeAuthService(),
+    credentialStore: CredentialStore = new KeychainCredentialStore(),
+    envFilePath: string = ENV_FILE_PATH
   ) {
+    this.credentialStore = credentialStore;
+    this.envFilePath = envFilePath;
     this.versionRunner = versionRunner;
     this.connectionTester = connectionTester;
     this.now = now;
@@ -248,19 +261,28 @@ export class SetupService {
     return { ok: false, message: buildBambooHRError(kind, status, error).message };
   }
 
-  /** Persist credentials to the root .env and apply them immediately. */
+  /**
+   * Save the key to the OS credential store (never to disk in plaintext) and the company
+   * address to the root .env, and apply both immediately. If the credential store is
+   * unavailable, the key goes to the owner-only .env instead.
+   */
   async saveCredentials(apiKey: string, subdomain: string): Promise<void> {
     let existing = '';
     try {
-      existing = await fs.readFile(ENV_FILE_PATH, 'utf-8');
+      existing = await fs.readFile(this.envFilePath, 'utf-8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
+    const previousSubdomain = config.bambooHR.subdomain;
+    const location = storeApiKey(this.credentialStore, subdomain, apiKey);
     const updated = upsertEnvLines(existing, {
-      BAMBOOHR_API_KEY: apiKey,
+      BAMBOOHR_API_KEY: location === 'keychain' ? '' : apiKey,
       BAMBOOHR_SUBDOMAIN: subdomain,
     });
-    await writePrivateFile(ENV_FILE_PATH, updated);
+    await writePrivateFile(this.envFilePath, updated);
+    if (previousSubdomain !== '' && previousSubdomain.toLowerCase() !== subdomain.toLowerCase()) {
+      forgetApiKey(this.credentialStore, previousSubdomain);
+    }
     setBambooHRCredentials(apiKey, subdomain);
     this.invalidateConnectionCache();
   }

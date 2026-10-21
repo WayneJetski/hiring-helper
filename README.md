@@ -88,7 +88,7 @@ Clicking it downloads the update, installs packages if they changed, builds, and
 #### Uninstalling
 
 1. `hiring-helper stop`
-2. Delete the install folder. Your applicant data and BambooHR key are inside it (`server/data` and `.env`), so back those up first if you want to keep them.
+2. Delete the install folder. Your applicant data is inside it (`server/data`), so back that up first if you want to keep it. The BambooHR key is not in the folder: it is in your computer's credential store (Keychain on macOS, Credential Manager on Windows), and you can remove it there once you no longer need it.
 3. Remove the `# >>> hiring-helper >>>` block from your shell profile (macOS and Linux), or the install folder's `bin` entry from your user PATH (Windows: System Properties, Environment Variables).
 
 ### Developer setup
@@ -238,7 +238,7 @@ The application uses SQLite for local data storage. See [DATABASE.md](./DATABASE
 
 ## Security
 
-- API keys are stored in the `.env` file next to the app (owner-only; never commit it)
+- The BambooHR API key is stored in your operating system's credential store (macOS Keychain, Windows Credential Manager, Linux Secret Service), not in a file. An older key found in `.env` is moved there on the next start and blanked in the file. Only where no credential store exists (for example a headless Linux server) does the key stay in the owner-only `.env`
 - Backend acts as a proxy to the BambooHR API. The AI that reads résumés has no way to change anything in BambooHR; see [SECURITY.md](./SECURITY.md) for how that is enforced and what to do on your side (start with a least-privilege API key)
 - There is no login: the app listens only on `127.0.0.1` (your own computer), refuses requests addressed to any other host name, and refuses changes sent from other websites. Do not expose it to a network without adding authentication first.
 

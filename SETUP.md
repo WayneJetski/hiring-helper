@@ -31,7 +31,7 @@ cp .env.example .env
 
 ## 2. BambooHR credentials
 
-**Easiest:** start the app (step 4) and open it. If BambooHR is not connected, a setup screen asks for your company address and API key, tests them, and saves them for you. You can reopen it any time from the **Connected to ... .bamboohr.com** badge in the top bar. The rest of this section is the manual way, by editing `.env`.
+**Easiest:** start the app (step 4) and open it. If BambooHR is not connected, a setup screen asks for your company address and API key, tests them, and saves them for you (the key goes to your computer's credential store, not into a file). You can reopen it any time from the **Connected to ... .bamboohr.com** badge in the top bar. The rest of this section is the manual way, by editing `.env`; a key written there is moved into the credential store the next time the app starts, and the line in `.env` is blanked.
 
 Open `.env` and fill in two lines:
 
