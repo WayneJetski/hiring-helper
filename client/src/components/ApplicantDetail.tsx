@@ -126,7 +126,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
         <button onClick={handleBack} className="back-button">
           <Icon name="arrowLeft" /> Back to list
         </button>
-        <div className="error">Error: {error}</div>
+        <div className="load-error">Error: {error}</div>
         {resumeModal}
       </div>
     );
@@ -138,7 +138,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
         <button onClick={handleBack} className="back-button">
           <Icon name="arrowLeft" /> Back to list
         </button>
-        <div className="error">Applicant not found</div>
+        <div className="load-error">Applicant not found</div>
       </div>
     );
   }

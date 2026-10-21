@@ -84,6 +84,16 @@
   padding: 0.5rem 1rem;
   border-radius: 6px;
   animation: fadeIn 0.3s ease-in;
+  /* The icon stays beside the first line when the message wraps. */
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.5;
+}
+
+/* Icons are 1em tall, so (line-height - 1em) / 2 centres them on line one. */
+.sync-message > .icon {
+  margin-top: 0.25em;
 }
 
 .sync-message.success {
@@ -270,14 +280,14 @@
 }
 
 .loading,
-.error,
+.load-error,
 .no-results {
   text-align: center;
   padding: 3rem;
   color: var(--hh-muted);
 }
 
-.error {
+.load-error {
   color: #dc3545;
 }
 
@@ -419,7 +429,7 @@
 
 /* Empty and error states */
 .no-results p + p,
-.error p + p {
+.load-error p + p {
   margin-top: 0.4rem;
 }
 
