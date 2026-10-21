@@ -22,6 +22,7 @@ import {
 } from '../repositories/applications.repository.js';
 import { ContentUpdatesRepository } from '../repositories/content-updates.repository.js';
 import { isBambooRateLimitError } from '../utils/rate-limit.js';
+import type { ReviewedChange } from '../validation/reviewed-changes.js';
 
 export interface PushPreviewResult {
   count: number;
@@ -41,6 +42,8 @@ export interface PushResult {
   pushed: number;
   failed: number;
   rateLimited: boolean;
+  /** Reviewed changes that were not sent because the row changed after the preview. */
+  changedSinceReview: number;
   results: PushItemResult[];
 }
 
@@ -79,19 +82,28 @@ export class BambooPushService {
 
   /**
    * Push pending status changes to BambooHR, one at a time (BambooHR rate-limits
-   * under load). Optionally restrict to a subset of application `ids`.
+   * under load). When `reviewed` is given, only a pending row that still matches a
+   * reviewed change (same application AND same target status) is sent; the rest are
+   * counted in `changedSinceReview`.
    *
    * A per-item failure is recorded and the run continues. A rate-limit (429)
    * halts the run: already-pushed changes are reconciled and returned as partial
    * progress, and the halt is logged to sync history. Each success advances that
    * row's bamboo_status_id so it no longer shows as pending.
    */
-  async pushStatuses(jobId?: number, ids?: number[]): Promise<PushResult> {
+  async pushStatuses(jobId?: number, reviewed?: ReviewedChange[]): Promise<PushResult> {
     const pending = this.applicationsRepo.findPendingStatusPushes(jobId);
-    const toPush =
-      ids && ids.length > 0
-        ? pending.filter((item) => ids.includes(item.id))
-        : pending;
+    const toPush = reviewed
+      ? pending.filter((item) =>
+          reviewed.some((change) => change.id === item.id && change.toStatusId === item.toStatusId)
+        )
+      : pending;
+    const changedSinceReview = reviewed
+      ? reviewed.filter(
+          (change) =>
+            !toPush.some((item) => item.id === change.id && item.toStatusId === change.toStatusId)
+        ).length
+      : 0;
 
     const results: PushItemResult[] = [];
     let pushed = 0;
@@ -131,7 +143,7 @@ export class BambooPushService {
       }
     }
 
-    return { total: toPush.length, pushed, failed, rateLimited, results };
+    return { total: toPush.length, pushed, failed, rateLimited, changedSinceReview, results };
   }
 
   /**

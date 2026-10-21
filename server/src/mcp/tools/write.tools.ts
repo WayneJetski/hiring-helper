@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpDeps } from '../deps.js';
+import { outOfScopeMessage } from '../application-scope.js';
 import { registerTool } from '../register.js';
 import { jsonResult, errorResult } from '../result.js';
 
@@ -66,6 +67,9 @@ export function registerWriteTools(server: McpServer, deps: McpDeps): void {
       },
     },
     async (args) => {
+      if (!deps.scope.allows(args.applicationId)) {
+        return errorResult(outOfScopeMessage(args.applicationId));
+      }
       try {
         const summary = await deps.evaluation.saveEvaluation(args.applicationId, {
           confidence: args.confidence,

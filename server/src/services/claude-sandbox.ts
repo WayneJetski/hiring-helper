@@ -15,7 +15,9 @@
  * other MCP servers (Slack, Jira, ...) from being loaded.
  */
 
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { SCORING_SCOPE_VARIABLE } from '../mcp/application-scope.js';
 
 /** The only built-in tool a scoring run keeps: the skill that drives the flow. */
 export const SCORING_BUILTIN_TOOLS = ['Skill'];
@@ -50,14 +52,32 @@ const mcpToolId = (toolName: string): string => `mcp__hiring-helper__${toolName}
 export const SCORING_MCP_TOOLS = SCORING_TOOL_NAMES.map(mcpToolId);
 export const WITHHELD_MCP_TOOLS = WITHHELD_TOOL_NAMES.map(mcpToolId);
 
-/** Arguments for a run that may use the hiring-helper scoring tools and nothing else. */
-export function scoringSandboxArguments(repoRoot: string): string[] {
+/**
+ * The project's MCP config with the batch of applications this run may touch added to
+ * the hiring-helper server's environment. Returns the config as JSON text, which
+ * `--mcp-config` accepts in place of a file path.
+ */
+export function scopedMcpConfig(repoRoot: string, applicationIds: number[]): string {
+  const config = JSON.parse(readFileSync(join(repoRoot, '.mcp.json'), 'utf-8')) as {
+    mcpServers: Record<string, { env?: Record<string, string> }>;
+  };
+  const server = config.mcpServers['hiring-helper'];
+  server.env = { ...server.env, [SCORING_SCOPE_VARIABLE]: applicationIds.join(',') };
+  return JSON.stringify(config);
+}
+
+/**
+ * Arguments for a run that may use the hiring-helper scoring tools and nothing else.
+ * Given the batch's application ids, the MCP server also refuses any other application.
+ */
+export function scoringSandboxArguments(repoRoot: string, applicationIds?: number[]): string[] {
+  const hasBatch = applicationIds !== undefined && applicationIds.length > 0;
   return [
     '--tools',
     ...SCORING_BUILTIN_TOOLS,
     '--strict-mcp-config',
     '--mcp-config',
-    join(repoRoot, '.mcp.json'),
+    hasBatch ? scopedMcpConfig(repoRoot, applicationIds) : join(repoRoot, '.mcp.json'),
     '--disallowedTools',
     ...WITHHELD_MCP_TOOLS,
     // --allowedTools is variadic, so keep it last.

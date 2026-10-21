@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   SCORING_MCP_TOOLS,
+  scopedMcpConfig,
   WITHHELD_MCP_TOOLS,
   claudeChildEnvironment,
   scoringSandboxArguments,
@@ -72,4 +73,18 @@ test('building the child environment does not change the server\'s own', () => {
   const parent = { BAMBOOHR_API_KEY: 'secret' };
   claudeChildEnvironment(parent);
   assert.equal(parent.BAMBOOHR_API_KEY, 'secret');
+});
+
+test('a batch is passed to the MCP server so it refuses every other application', () => {
+  const root = resolve(SRC_DIR, '../..');
+  const config = JSON.parse(scopedMcpConfig(root, [101, 102])) as {
+    mcpServers: Record<string, { command: string; env?: Record<string, string> }>;
+  };
+  const server = config.mcpServers['hiring-helper'];
+  assert.equal(server.command, 'node', 'the project definition is kept');
+  assert.equal(server.env?.HIRING_HELPER_SCORING_SCOPE, '101,102');
+
+  const args = scoringSandboxArguments(root, [101, 102]);
+  assert.match(args[args.indexOf('--mcp-config') + 1], /HIRING_HELPER_SCORING_SCOPE/);
+  assert.match(scoringSandboxArguments(root)[scoringSandboxArguments(root).indexOf('--mcp-config') + 1], /\.mcp\.json$/);
 });

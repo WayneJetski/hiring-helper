@@ -96,3 +96,25 @@ test('the write method exists in exactly one class', () => {
   );
   assert.deepEqual(describe(definitions), ['services/bamboohr-status-writer.service.ts']);
 });
+
+/** The only production files allowed to make outbound HTTP requests, and why. */
+const OUTBOUND_HTTP_ALLOW_LIST = [
+  'services/bamboohr-http.ts', // every authenticated BambooHR call, with the access policy
+  'services/setup.service.ts', // one GET to test a key typed on the setup screen
+  'services/job-posting-fetcher.ts', // GET of the public careers page
+];
+
+test('outbound HTTP is made only by the reviewed files, and those send only GET (or the policed status POST)', () => {
+  const outbound = listSourceFiles(SRC_DIR).filter((file) =>
+    /^import (?!type)[^\n]*from 'axios'|require\('axios'\)|[^a-zA-Z.]fetch\(|fetchFn\(|node:https?'|from 'https?'/m.test(
+      readFileSync(file, 'utf-8')
+    )
+  );
+  assert.deepEqual(describe(outbound), [...OUTBOUND_HTTP_ALLOW_LIST].sort());
+
+  for (const relativePath of ['services/setup.service.ts', 'services/job-posting-fetcher.ts']) {
+    const source = readFileSync(join(SRC_DIR, relativePath), 'utf-8');
+    assert.equal(/\.(post|put|patch|delete|request)\s*\(/.test(source), false, relativePath);
+    assert.equal(/method\s*:\s*['"](?!GET)/i.test(source), false, relativePath);
+  }
+});

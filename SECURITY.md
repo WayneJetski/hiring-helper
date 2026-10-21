@@ -16,9 +16,9 @@ The AI that reads résumés (Claude, through the MCP server) has no way to write
 | --- | --- | --- |
 | Separate classes | `BambooHRService` (read-only) is what sync, résumé fetching and the MCP server use. The only write, "set an application's status", lives in `BambooHRStatusWriter`, used only by the push service. | `server/src/services/bamboohr-*.ts` |
 | Network policy | A read-only client refuses anything but `GET`. The status writer refuses anything but `POST /applicant_tracking/applications/<number>/status`. Both refuse an absolute URL (the key could go to another host) and a redirect off `bamboohr.com`. | `bamboohr-http.ts` |
-| Architecture test | Fails the build if the MCP server (transitively) imports the writer, the push service or a controller, if any other file sends a non-GET request to BambooHR, or if the write method exists anywhere else. | `server/src/architecture/` |
+| Architecture test | Fails the build if the MCP server (transitively, by static imports) reaches the writer, the push service or a controller, if outbound HTTP appears in any file outside a short reviewed list, or if the write method exists anywhere else. It is a guard against developer mistakes, not a proof: a determined change could still evade a source scan, which is why the network policy above exists too. | `server/src/architecture/` |
 | Not an MCP tool | There is no MCP tool, prompt or resource that changes a status. | `server/src/mcp/` |
-| A person's click | `POST /api/applicants/push` accepts only a request labelled by a browser as coming from the app's own page, and only for the exact application ids listed in the preview the person reviewed (the page makes them tick a confirmation first). | `requireBrowserOrigin`, `application-id-selection.ts` |
+| A person's click | `POST /api/applicants/push` accepts only a request labelled by a browser as coming from the app's own page, and only for the exact changes (application and target stage) in the preview the person reviewed; the page makes them tick a confirmation first. A row edited after the preview is skipped, not sent. | `requireBrowserOrigin`, `reviewed-changes.ts` |
 
 A status change never emails a candidate: the app calls no BambooHR email, disposition or notification endpoint.
 
@@ -29,11 +29,12 @@ A status change never emails a candidate: the app calls no BambooHR email, dispo
 - **No built-in tools except `Skill`**: no shell, file, search or web tools (`--tools`). Allow-lists alone are not enough, because anything not listed would otherwise follow your own Claude Code settings.
 - **Only this project's MCP server** (`--strict-mcp-config`), so your Slack, Jira or other servers are not loaded.
 - **Only seven hiring-helper tools**: read a job, read a candidate, read the résumé text, save an evaluation. The tools that rewrite the job posting or trigger a sync are removed from that run, so a hostile résumé cannot change the posting that later candidates are judged against.
+- **Only its own batch of applicants.** The MCP server the run launches is told which applications belong to the batch and refuses to read or save any other, so a hostile résumé cannot rewrite someone else's score.
 - **No BambooHR API key in its environment.**
 
 The AI-assisted criteria drafting runs with no tools and no MCP servers at all (`--tools ""`).
 
-Residual risk: a hostile résumé can still try to influence **its own score** or text it writes into the evaluation. That is inherent in having an AI read it. Scores are advice for a person who makes the decision, and nothing is sent to BambooHR without that person's review.
+Residual risk: a hostile résumé can still try to influence the scores of **the other candidates in the same batch of 12** (and its own), or the text written into an evaluation. That is inherent in having an AI read it. Scores are advice for a person who makes the decision, and nothing is sent to BambooHR without that person's review. The `Skill` tool is available to the run, so it could invoke other skills you have installed; they run without shell or file tools.
 
 ## Only your own browser can use the app
 
@@ -41,8 +42,8 @@ The server has no login, so it refuses anything that does not come from your own
 
 - It binds to `127.0.0.1` only.
 - A request whose `Host` is not `localhost`, `127.0.0.1` or `[::1]` is refused (DNS rebinding).
-- A write whose `Origin` is not the app's own page (this server's port, or the Vite dev server's port) is refused, including pages served from other `localhost` ports.
-- Saving the API key, signing in to Claude, applying an update, and pushing to BambooHR additionally require a browser-labelled request (`Origin` present, `Sec-Fetch-Site: same-origin`), so a script or terminal tool cannot trigger them by accident or by prompt injection without deliberately forging headers.
+- A write whose `Origin` is not the app's own page is refused, including pages served from other `localhost` ports. In an installed copy that means this server's port only; the Vite dev server's port is trusted only in development, and CORS is off in production.
+- Saving the API key, signing in to Claude, applying an update, moving applicants between stages, and pushing to BambooHR additionally require a browser-labelled request (`Origin` present, `Sec-Fetch-Site` same-origin), so a script or terminal tool cannot trigger them by accident.
 - The API accepts JSON only (no HTML form posts).
 
 Do not bind the server to another address or put it behind a tunnel or reverse proxy without adding authentication first.
@@ -69,8 +70,9 @@ Applicant-supplied links (LinkedIn, website) are shown only if they are plain `h
 
 ## Known limits
 
+- **A process that can run commands can forge a browser's headers.** The browser-only checks stop web pages and careless scripts, not a shell on your computer. In particular, if you run `/score-candidates` yourself in a Claude Code session that has shell access, a hostile résumé could try to get that Claude to call the app's API with forged headers. Only run the skill in a session without shell access (the app's "Score new applicants" button already does), or review every command it asks to run.
 - Anything running as you on your computer (a shell, another program) can read `.env` and `server/data/` and can send requests to the app. This tool protects against web pages, hostile applicant content and AI mistakes, not against malware that already runs as you.
-- The project's `.claude/settings.json` denies Claude Code reading or editing `.env` and running `curl` against the write endpoints. Those rules are best-effort friction for interactive sessions (shell commands can be written many ways); the guarantees above do not depend on them.
+- The project's `.claude/settings.json` denies Claude Code reading or editing `.env` and running `curl` against the write endpoints. Those rules are best-effort friction for interactive sessions (a shell can read the file or send the request in many other ways); the guarantees above do not depend on them.
 
 ## Reporting a problem
 

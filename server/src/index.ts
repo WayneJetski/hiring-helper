@@ -33,15 +33,20 @@ const app = express();
 app.use(helmet());
 
 // Only this computer's own browser and tools may use the API (see the middleware for why).
-app.use(createLocalOnlyGuard(allowedOriginsFor(config.server.port, config.client.url)));
+const isProduction = config.server.nodeEnv === 'production';
+app.use(createLocalOnlyGuard(allowedOriginsFor(config.server.port, config.client.url, isProduction)));
 
 // CORS configuration
-app.use(
-  cors({
-    origin: config.client.url,
-    credentials: true,
-  })
-);
+// An installed copy serves its page from this server (same origin), so it needs no CORS
+// at all. Only the Vite dev client, on another port, is let in during development.
+if (!isProduction) {
+  app.use(
+    cors({
+      origin: config.client.url,
+      credentials: true,
+    })
+  );
+}
 
 // Rate limiting - Apply only to expensive operations, not to read endpoints
 // This ensures the app remains accessible even during heavy background processing

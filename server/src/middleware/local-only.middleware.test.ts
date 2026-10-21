@@ -57,6 +57,12 @@ test('only this server and the dev client are allowed to make changes', () => {
   }
 });
 
+test('in production the dev client port is not trusted', () => {
+  const origins = allowedOriginsFor(28417, 'http://localhost:5173', true);
+  assert.equal(origins.has('http://localhost:28417'), true);
+  assert.equal(origins.has('http://localhost:5173'), false);
+});
+
 test('an unusable CLIENT_URL leaves only the server port allowed', () => {
   const origins = allowedOriginsFor(3000, 'not a url');
   assert.equal(origins.has('http://localhost:3000'), true);

@@ -410,12 +410,16 @@ export function BulkActions({
       setMessage('');
       // Send exactly the changes listed in the preview the person just confirmed;
       // the server refuses a push that does not name them.
-      const reviewedIds = pushPreview?.pending.map((item) => item.id) ?? [];
-      const result = await apiService.pushToBambooHR(selectedJobId, reviewedIds);
+      const reviewedChanges =
+        pushPreview?.pending.map((item) => ({ id: item.id, toStatusId: item.toStatusId })) ?? [];
+      const result = await apiService.pushToBambooHR(selectedJobId, reviewedChanges);
       setPushResult(result);
       setHasConfirmedPush(false);
       const parts = [`${result.pushed} change${result.pushed !== 1 ? 's' : ''} sent to BambooHR`];
       if (result.failed > 0) parts.push(`${result.failed} failed`);
+      if (result.changedSinceReview > 0) {
+        parts.push(`${result.changedSinceReview} skipped because they changed after you reviewed them`);
+      }
       if (result.rateLimited) parts.push('halted early (rate limited, retry to finish)');
       setMessage(`${parts.join('; ')}.`);
       // Refresh the remaining pending set and the surrounding list.

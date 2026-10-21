@@ -267,12 +267,15 @@ class ApiService {
 
   /**
    * Push pending local status changes to BambooHR (status only — never emails).
-   * `ids` must be exactly the changes the person reviewed; the server refuses a push
-   * that does not name them.
+   * `changes` must be exactly what the person reviewed (application and target
+   * status); the server refuses a push without them and skips any row edited since.
    */
-  async pushToBambooHR(jobId: number | undefined, ids: number[]): Promise<PushResult> {
+  async pushToBambooHR(
+    jobId: number | undefined,
+    changes: Array<{ id: number; toStatusId: number }>
+  ): Promise<PushResult> {
     try {
-      const response = await this.client.post<PushResult>('/applicants/push', { jobId, ids });
+      const response = await this.client.post<PushResult>('/applicants/push', { jobId, changes });
       return response.data;
     } catch (error) {
       this.handleError(error, 'Failed to push to BambooHR');

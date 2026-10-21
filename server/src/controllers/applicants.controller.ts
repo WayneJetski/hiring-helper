@@ -10,7 +10,7 @@ import { ApplicantQueryService, DataIntegrityError } from '../services/applicant
 import { ApplicationStatesRepository } from '../repositories/application-states.repository.js';
 import { BulkActionService } from '../services/bulk-action.service.js';
 import { BambooPushService } from '../services/bamboo-push.service.js';
-import { parseRequiredApplicationIds } from '../validation/application-id-selection.js';
+import { parseReviewedChanges } from '../validation/reviewed-changes.js';
 import type { BulkCondition } from '../repositories/applications.repository.js';
 import { APPLICATION_FLAGS, isApplicationFlag } from '../types/flags.js';
 
@@ -520,20 +520,20 @@ export class ApplicantsController {
   /**
    * POST /api/applicants/push
    * Push pending local status changes to BambooHR (status only — never emails
-   * candidates). Body: { jobId?, ids } — `ids` is required: exactly the applications
-   * the person reviewed in the preview. Anything else pending is left alone.
+   * candidates). Body: { jobId?, changes: [{ id, toStatusId }] } — required: exactly the
+   * changes the person reviewed in the preview. A row edited since is not sent.
    */
   async pushToBambooHR(
-    req: Request<unknown, unknown, { jobId?: number; ids?: number[] }>,
+    req: Request<unknown, unknown, unknown>,
     res: Response
   ): Promise<void> {
     try {
-      const selection = parseRequiredApplicationIds(req.body);
+      const selection = parseReviewedChanges(req.body);
       if (!selection.ok) {
         res.status(400).json({ error: 'Invalid request', message: selection.message });
         return;
       }
-      const result = await bambooPushService.pushStatuses(selection.jobId, selection.ids);
+      const result = await bambooPushService.pushStatuses(selection.jobId, selection.changes);
       res.json(result);
     } catch (error) {
       console.error('Failed to push to BambooHR:', error);

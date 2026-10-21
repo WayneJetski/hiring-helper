@@ -207,7 +207,7 @@ Query parameters:
 ### POST /api/applicants/push
 Push local status changes (stage moves and rejections) back to BambooHR.
 
-Body: `{ jobId?, ids }` — `ids` is required and must list the applications you reviewed in the preview; anything else pending is left alone. The request must come from the web page (the browser's `Origin`), so it is refused from `curl`.
+Body: `{ jobId?, changes: [{ id, toStatusId }] }` — required, and must be exactly the changes you reviewed in the preview; a row edited since is skipped (`changedSinceReview`) and anything else pending is left alone. The request must come from the web page (the browser's `Origin`), so it is refused from `curl`.
 
 Only the status is written to BambooHR; **candidates are never emailed**. Changes made locally are held until you push them, and a sync will not overwrite an un-pushed local change.
 

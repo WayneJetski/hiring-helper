@@ -33,10 +33,17 @@ export function isLocalHostHeader(hostHeader: string | undefined): boolean {
   return hostHeader !== undefined && LOCAL_HOSTNAMES.has(hostnameOf(hostHeader));
 }
 
-/** The page origins allowed to make changes: this server's port and the dev client's port. */
-export function allowedOriginsFor(serverPort: number, clientUrl: string): Set<string> {
+/** The page origins allowed to make changes: this server's port, plus the dev client's port outside production. */
+export function allowedOriginsFor(
+  serverPort: number,
+  clientUrl: string,
+  isProduction = false
+): Set<string> {
   const ports = new Set<string>([String(serverPort)]);
   try {
+    // An installed copy serves its own page; only a development checkout has a separate
+    // client port, and trusting it in production would trust whatever else listens there.
+    if (isProduction) throw new Error('no dev client in production');
     const clientPort = new URL(clientUrl).port;
     if (clientPort !== '') ports.add(clientPort);
   } catch {

@@ -147,7 +147,7 @@ export class ScoringService {
       '--output-format',
       'stream-json',
       '--verbose',
-      ...scoringSandboxArguments(REPO_ROOT),
+      ...scoringSandboxArguments(REPO_ROOT, batch),
     ];
 
     let child: ChildProcess;

@@ -183,13 +183,29 @@ test('a non-rate-limit failure is recorded and the run continues', async () => {
   assert.deepEqual(repo.reconciled, [{ id: 102, statusId: 33 }], 'the failed row is not reconciled');
 });
 
-test('ids filter restricts the push to the selected subset', async () => {
+test('only the reviewed changes are sent', async () => {
   const { service, client } = makeService([pending(101, 10), pending(102, 33), pending(103, 15)]);
 
-  const result = await service.pushStatuses(45, [102]);
+  const result = await service.pushStatuses(45, [{ id: 102, toStatusId: 33 }]);
 
   assert.equal(result.total, 1);
   assert.equal(result.pushed, 1);
+  assert.deepEqual(client.calls, [
+    { method: 'updateApplicationStatus', applicationId: 102, statusId: 33 },
+  ]);
+});
+
+test('a change edited after the preview is not sent under the old confirmation', async () => {
+  // The person reviewed 101 -> 10 and 102 -> 33; 101 has since been moved to 99.
+  const { service, client } = makeService([pending(101, 99), pending(102, 33), pending(103, 15)]);
+
+  const result = await service.pushStatuses(45, [
+    { id: 101, toStatusId: 10 },
+    { id: 102, toStatusId: 33 },
+  ]);
+
+  assert.equal(result.pushed, 1);
+  assert.equal(result.changedSinceReview, 1);
   assert.deepEqual(client.calls, [
     { method: 'updateApplicationStatus', applicationId: 102, statusId: 33 },
   ]);
