@@ -193,6 +193,7 @@ cmd_restart() {
 cmd_status() {
   local pid
   pid="$(server_pid)"
+  printf 'Installed in %s\n' "$REPO_ROOT"
   if [ -n "$pid" ] && is_healthy; then
     printf 'Hiring Helper is running at %s (process %s)\n' "$(server_url)" "$pid"
   elif [ -n "$pid" ]; then

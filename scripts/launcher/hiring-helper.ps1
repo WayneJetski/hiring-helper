@@ -182,6 +182,7 @@ function Restart-StoppingFirst([string[]]$Options) {
 
 function Show-Status {
     $serverProcess = Get-OurServerProcess
+    Write-Host "Installed in $RepoRoot"
     if (($null -ne $serverProcess) -and (Test-ServerIsRunning (Get-ServerPort))) {
         Write-Host "Hiring Helper is running at $(Get-ServerUrl) (process $($serverProcess.Id))"
     }

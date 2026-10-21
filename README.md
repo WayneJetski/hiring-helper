@@ -71,7 +71,7 @@ Running the installer again on the same folder updates that install instead of m
 | `hiring-helper start` | Start it in the background and open the browser (`--foreground` keeps it in the terminal, `--no-open` skips the browser) |
 | `hiring-helper stop` | Stop it |
 | `hiring-helper restart` | Stop, then start |
-| `hiring-helper status` | Say whether it is running, and where |
+| `hiring-helper status` | Say whether it is running, where, and which folder it is installed in |
 | `hiring-helper open` | Open it in the browser |
 | `hiring-helper logs` | Show the end of the log (`-f` keeps following it) |
 | `hiring-helper update` | Download the latest version, and restart if it was running (`--check` only says whether one exists) |
