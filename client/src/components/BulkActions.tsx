@@ -408,8 +408,10 @@ export function BulkActions({
       setPushSubmitting(true);
       setErrorMessage('');
       setMessage('');
-      // Push every pending change in scope (no id subset).
-      const result = await apiService.pushToBambooHR(selectedJobId);
+      // Send exactly the changes listed in the preview the person just confirmed;
+      // the server refuses a push that does not name them.
+      const reviewedIds = pushPreview?.pending.map((item) => item.id) ?? [];
+      const result = await apiService.pushToBambooHR(selectedJobId, reviewedIds);
       setPushResult(result);
       setHasConfirmedPush(false);
       const parts = [`${result.pushed} change${result.pushed !== 1 ? 's' : ''} sent to BambooHR`];
@@ -426,7 +428,7 @@ export function BulkActions({
     } finally {
       setPushSubmitting(false);
     }
-  }, [selectedJobId, onActionComplete]);
+  }, [selectedJobId, pushPreview, onActionComplete]);
 
   const confirmLabel = mode === 'reject' ? 'Confirm Reject' : 'Confirm Move';
   const formTitle =

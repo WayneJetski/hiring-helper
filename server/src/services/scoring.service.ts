@@ -6,8 +6,8 @@
  * skill, the `hiring-helper` MCP server, and the (now per-job) rubric — the app
  * itself makes no LLM call and holds no API key.
  *
- * Safety: the run is sandboxed to the Skill tool + the hiring-helper MCP tools
- * only (`ALLOWED_TOOLS`); no Bash/Write/Edit. One run at a time (single-flight).
+ * Safety: the run is sandboxed to the Skill tool + the hiring-helper scoring tools
+ * only (see claude-sandbox.ts); no Bash/Write/Edit, no other MCP servers. One run at a time (single-flight).
  * It never writes to BambooHR. Requires the Claude Code CLI installed and
  * authenticated on the host running this server.
  */
@@ -15,14 +15,12 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { claudeChildEnvironment, scoringSandboxArguments } from './claude-sandbox.js';
 import { JobsRepository } from '../repositories/jobs.repository.js';
 import { NOT_SIGNED_IN_MESSAGE, isNotSignedInText } from './claude-auth.service.js';
 import { SCORING_MODEL } from '../scoring/claude-model.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
-
-/** The scoring run may use only these tools (tight sandbox). */
-const ALLOWED_TOOLS = ['Skill', 'mcp__hiring-helper__*'];
 
 /**
  * Candidates scored per headless run. A long session keeps every résumé it has
@@ -149,14 +147,12 @@ export class ScoringService {
       '--output-format',
       'stream-json',
       '--verbose',
-      // --allowedTools is variadic, so keep it last.
-      '--allowedTools',
-      ...ALLOWED_TOOLS,
+      ...scoringSandboxArguments(REPO_ROOT),
     ];
 
     let child: ChildProcess;
     try {
-      child = this.spawnFn('claude', args, { cwd: REPO_ROOT });
+      child = this.spawnFn('claude', args, { cwd: REPO_ROOT, env: claudeChildEnvironment() });
     } catch (error) {
       this.fail(this.spawnErrorMessage(error));
       return false;

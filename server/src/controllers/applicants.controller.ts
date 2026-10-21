@@ -10,6 +10,7 @@ import { ApplicantQueryService, DataIntegrityError } from '../services/applicant
 import { ApplicationStatesRepository } from '../repositories/application-states.repository.js';
 import { BulkActionService } from '../services/bulk-action.service.js';
 import { BambooPushService } from '../services/bamboo-push.service.js';
+import { parseRequiredApplicationIds } from '../validation/application-id-selection.js';
 import type { BulkCondition } from '../repositories/applications.repository.js';
 import { APPLICATION_FLAGS, isApplicationFlag } from '../types/flags.js';
 
@@ -519,23 +520,20 @@ export class ApplicantsController {
   /**
    * POST /api/applicants/push
    * Push pending local status changes to BambooHR (status only — never emails
-   * candidates). Body: { jobId?, ids? } — omit ids to push all pending in scope.
+   * candidates). Body: { jobId?, ids } — `ids` is required: exactly the applications
+   * the person reviewed in the preview. Anything else pending is left alone.
    */
   async pushToBambooHR(
     req: Request<unknown, unknown, { jobId?: number; ids?: number[] }>,
     res: Response
   ): Promise<void> {
     try {
-      const { jobId, ids } = req.body ?? {};
-      if (jobId !== undefined && (typeof jobId !== 'number' || Number.isNaN(jobId))) {
-        res.status(400).json({ error: 'Invalid request', message: 'jobId must be a number' });
+      const selection = parseRequiredApplicationIds(req.body);
+      if (!selection.ok) {
+        res.status(400).json({ error: 'Invalid request', message: selection.message });
         return;
       }
-      if (ids !== undefined && (!Array.isArray(ids) || ids.some((id) => typeof id !== 'number'))) {
-        res.status(400).json({ error: 'Invalid request', message: 'ids must be an array of numbers' });
-        return;
-      }
-      const result = await bambooPushService.pushStatuses(jobId, ids);
+      const result = await bambooPushService.pushStatuses(selection.jobId, selection.ids);
       res.json(result);
     } catch (error) {
       console.error('Failed to push to BambooHR:', error);

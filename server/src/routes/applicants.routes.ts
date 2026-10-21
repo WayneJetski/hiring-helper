@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import { ApplicantsController } from '../controllers/applicants.controller.js';
+import { requireBrowserOrigin } from '../middleware/local-only.middleware.js';
 
 const router = Router();
 const controller = new ApplicantsController();
@@ -30,7 +31,8 @@ router.post('/duplicates/cleanup', (req, res) => controller.duplicatesCleanup(re
 // Registered before /:id so they aren't captured by the parameterized route.
 router.get('/push/preview', (req, res) => controller.pushPreview(req, res));
 router.post('/push/discard', (req, res) => controller.discardPendingPush(req, res));
-router.post('/push', (req, res) => controller.pushToBambooHR(req, res));
+// The only route that writes to BambooHR: it must come from the web page, never a script.
+router.post('/push', requireBrowserOrigin, (req, res) => controller.pushToBambooHR(req, res));
 
 // GET /api/applicants/:id - Get single applicant details
 router.get('/:id', (req, res) => controller.getApplicant(req, res));

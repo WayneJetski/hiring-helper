@@ -13,7 +13,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BambooPushService } from './bamboo-push.service.js';
-import type { BambooHRService } from './bamboohr.service.js';
+import type { ApplicationStatusWriter } from './bamboohr-status-writer.service.js';
 import type {
   ApplicationsRepository,
   PendingStatusPush,
@@ -99,7 +99,7 @@ function makeService(
   const repo = new FakeApplicationsRepo(pendingList);
   const updates = new FakeContentUpdatesRepo();
   const service = new BambooPushService(
-    client as unknown as BambooHRService,
+    client as ApplicationStatusWriter,
     repo as unknown as ApplicationsRepository,
     updates as unknown as ContentUpdatesRepository
   );

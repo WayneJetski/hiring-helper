@@ -6,13 +6,15 @@
  * its own and holds no key: it uses whichever account Claude Code is signed in
  * to on this computer.
  *
- * The run happens in an empty temporary folder so it does not load this
- * project's instructions or MCP servers, and it is only asked for text.
+ * The run happens in an empty temporary folder with every tool and MCP server
+ * switched off (see claude-sandbox.ts): it is only asked for text, and the prompt
+ * can contain a posting or answers that someone else wrote.
  */
 
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
 import { NOT_SIGNED_IN_MESSAGE, isNotSignedInText } from './claude-auth.service.js';
 import { tmpdir } from 'node:os';
+import { TEXT_ONLY_SANDBOX_ARGUMENTS, claudeChildEnvironment } from './claude-sandbox.js';
 import { SCORING_MODEL } from '../scoring/claude-model.js';
 
 /** Injectable spawn signature (so tests can supply a fake child process). */
@@ -57,9 +59,11 @@ export class ClaudeRunner {
 
       let child: ChildProcess;
       try {
-        child = this.spawnFn('claude', ['-p', prompt, '--model', this.model, '--output-format', 'json'], {
-          cwd: tmpdir(),
-        });
+        child = this.spawnFn(
+          'claude',
+          ['-p', prompt, '--model', this.model, '--output-format', 'json', ...TEXT_ONLY_SANDBOX_ARGUMENTS],
+          { cwd: tmpdir(), env: claudeChildEnvironment() }
+        );
       } catch (error) {
         reject(new ClaudeRunError(this.describeSpawnError(error)));
         return;

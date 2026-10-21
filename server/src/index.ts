@@ -18,7 +18,7 @@ import setupRoutes from './routes/setup.routes.js';
 import updateRoutes from './routes/update.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
-import { localOnlyGuard } from './middleware/local-only.middleware.js';
+import { allowedOriginsFor, createLocalOnlyGuard } from './middleware/local-only.middleware.js';
 import { initializeDatabase, closeDatabase } from './db/database.js';
 import { BambooHRSyncService } from './services/bamboohr-sync.service.js';
 import { registerClientAssets } from './utils/client-assets.js';
@@ -33,7 +33,7 @@ const app = express();
 app.use(helmet());
 
 // Only this computer's own browser and tools may use the API (see the middleware for why).
-app.use(localOnlyGuard);
+app.use(createLocalOnlyGuard(allowedOriginsFor(config.server.port, config.client.url)));
 
 // CORS configuration
 app.use(
@@ -54,8 +54,8 @@ const expensiveOpLimiter = rateLimit({
 });
 
 // Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// The API speaks JSON only; accepting HTML form posts would only widen the cross-site surface.
+app.use(express.json({ limit: '1mb' }));
 
 // Request logging
 app.use(requestLogger);

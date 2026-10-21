@@ -3,8 +3,8 @@
  * Handles all interactions with the BambooHR API
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { config, isBambooHRConfigured } from '../config/env.config.js';
+import type { AxiosInstance } from 'axios';
+import { BambooHRClientProvider, BambooHRNotConfiguredError, raiseBambooHRError } from './bamboohr-http.js';
 import type {
   BambooHRApplication,
   BambooHRApplicationStatus,
@@ -12,40 +12,18 @@ import type {
   BambooHRJob,
 } from '../types/bamboohr.types.js';
 
-/** Raised when a BambooHR call is attempted before credentials are saved. */
-export class BambooHRNotConfiguredError extends Error {
-  constructor() {
-    super('BambooHR is not connected yet. Open the app and complete the setup screen.');
-  }
-}
+export { BambooHRNotConfiguredError };
 
+/**
+ * Read-only: its HTTP client refuses everything except GET (see bamboohr-http.ts).
+ * Changing an application's status is a separate class, BambooHRStatusWriter, that
+ * the MCP server never receives.
+ */
 export class BambooHRService {
-  private cachedClient: { signature: string; client: AxiosInstance } | null = null;
+  private readonly clientProvider = new BambooHRClientProvider('read-only');
 
-  /**
-   * Axios client for the current credentials. Built on demand (and rebuilt when
-   * the credentials change) so saving them from the setup screen takes effect
-   * without restarting the server.
-   */
   private get client(): AxiosInstance {
-    if (!isBambooHRConfigured()) throw new BambooHRNotConfiguredError();
-
-    const signature = `${config.bambooHR.subdomain}:${config.bambooHR.apiKey}`;
-    if (this.cachedClient?.signature !== signature) {
-      const authToken = Buffer.from(`${config.bambooHR.apiKey}:`).toString('base64');
-      this.cachedClient = {
-        signature,
-        client: axios.create({
-          baseURL: config.bambooHR.baseUrl,
-          headers: {
-            Authorization: `Basic ${authToken}`,
-            Accept: 'application/json',
-          },
-          timeout: 30000,
-        }),
-      };
-    }
-    return this.cachedClient.client;
+    return this.clientProvider.client;
   }
 
   /**
@@ -120,25 +98,6 @@ export class BambooHRService {
   }
 
   /**
-   * Change an application's status in BambooHR.
-   *
-   * This is the ONLY write this app makes to BambooHR. It sends the `status`
-   * field and nothing else. BambooHR's status endpoint does not email or
-   * otherwise notify the candidate, and this method deliberately calls no
-   * email/disposition/notification endpoint. Do not add candidate-facing
-   * notifications here.
-   */
-  async updateApplicationStatus(applicationId: number, statusId: number): Promise<void> {
-    try {
-      await this.client.post(`/applicant_tracking/applications/${applicationId}/status`, {
-        status: statusId,
-      });
-    } catch (error) {
-      this.handleError(error, `Failed to update status for application ${applicationId}`);
-    }
-  }
-
-  /**
    * Get resume file as buffer (no caching - cache happens after parsing)
    */
   async getResumeFile(applicationId: number, resumeFileId: number): Promise<Uint8Array> {
@@ -157,27 +116,7 @@ export class BambooHRService {
     }
   }
 
-  /**
-   * Handle API errors consistently
-   */
   private handleError(error: unknown, message: string): never {
-    if (error instanceof BambooHRNotConfiguredError) throw error;
-
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status || 500;
-      const details = axiosError.response?.data || axiosError.message;
-      
-      console.error(`BambooHR API Error: ${message}`, {
-        status,
-        details,
-      });
-
-      throw new Error(`${message}: ${JSON.stringify(details)}`);
-    }
-
-    console.error(`Unexpected error: ${message}`, error);
-    throw new Error(message);
+    return raiseBambooHRError(error, message);
   }
 }
-
