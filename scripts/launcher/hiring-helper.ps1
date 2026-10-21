@@ -155,9 +155,28 @@ function Start-HiringHelperService([string[]]$Options, [switch]$SkipSetup) {
 }
 
 function Restart-HiringHelper([string[]]$Options) {
+    if ($Options -contains '--stop-first') { Restart-StoppingFirst $Options; return }
     # Set up first: if that fails, the running copy is left alone.
     Invoke-Setup
     if ($null -ne (Get-OurServerProcess)) { Stop-HiringHelper }
+    Start-HiringHelperService $Options -SkipSetup
+}
+
+# Windows cannot replace a native module (better-sqlite3) while the running server has it
+# loaded, so a change to the packages has to be installed with the server stopped. If setup
+# then fails, say why in .runtime\update.log (nobody sees this window) and bring back what is built.
+function Restart-StoppingFirst([string[]]$Options) {
+    New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
+    if ($null -ne (Get-OurServerProcess)) { Stop-HiringHelper }
+    Remove-Item $BuildStamp -ErrorAction SilentlyContinue   # the new version must be built
+    try {
+        Invoke-Setup
+    }
+    catch {
+        Add-Content (Join-Path $RuntimeDir 'update.log') "$(Get-Date -Format o) Update setup failed: $($_.Exception.Message)"
+        try { Start-HiringHelperService $Options -SkipSetup } catch { }
+        throw
+    }
     Start-HiringHelperService $Options -SkipSetup
 }
 
@@ -225,7 +244,7 @@ function Update-HiringHelper([string[]]$Options) {
     }
     if ($wasRunning) {
         Write-Host 'Restarting with the new version...'
-        Restart-HiringHelper @('--no-open')
+        Restart-HiringHelper @('--no-open', '--stop-first')
     }
     else {
         Write-Host 'Updated. Start it with: hiring-helper start'

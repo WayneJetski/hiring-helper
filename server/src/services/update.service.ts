@@ -64,8 +64,17 @@ export interface UpdateServiceDeps {
   run: CommandRunner;
   isManagedInstall: boolean;
   readVersion: () => string;
-  /** Start the detached restart; rejects if it could not be started. */
-  restart: () => Promise<void>;
+  /**
+   * Windows cannot replace a native module the running server has loaded, so `npm ci` must
+   * wait until the server is stopped. When true and packages changed, the install and build
+   * are left to the restart, which stops the server first.
+   */
+  installPackagesDuringRestart: boolean;
+  /**
+   * Start the detached restart; rejects if it could not be started. `stopFirst` asks it to
+   * stop this server before it installs and builds.
+   */
+  restart: (options: { stopFirst: boolean }) => Promise<void>;
   /** Record that the build is current, so the restart does not build again. */
   writeBuildStamp: () => Promise<void>;
   now: () => number;
@@ -116,9 +125,14 @@ export function summarizeFailure(result: Pick<CommandResult, 'stdout' | 'stderr'
   const lines = `${result.stdout}\n${result.stderr}`
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line !== '' && !/^npm (error|ERR!|notice|warn)/i.test(line));
-  const errorLines = lines.filter((line) => /error TS\d+|error:|SyntaxError|Cannot find|ERESOLVE|ENOENT|EACCES/i.test(line));
-  const chosen = (errorLines.length > 0 ? errorLines : lines).slice(-4).join(' | ');
+    .filter((line) => line !== '');
+  // npm reports the real cause (EBUSY, EPERM, ERESOLVE) on its own "npm error" lines, so look
+  // for it before dropping that prefix; only the generic remainder is boilerplate.
+  const errorLines = lines
+    .filter((line) => /error TS\d+|error:|SyntaxError|Cannot find|ERESOLVE|ENOENT|EACCES|EBUSY|EPERM|EEXIST|ENOSPC/i.test(line))
+    .map((line) => line.replace(/^npm (error|ERR!)\s*/i, ''));
+  const readable = lines.filter((line) => !/^npm (error|ERR!|notice|warn)/i.test(line));
+  const chosen = (errorLines.length > 0 ? errorLines : readable).slice(-4).join(' | ');
   return chosen.length <= ERROR_TAIL_CHARS ? chosen : `…${chosen.slice(-ERROR_TAIL_CHARS)}`;
 }
 
@@ -274,7 +288,7 @@ export class UpdateService {
   private async runUpdate(): Promise<void> {
     const { repoRoot, run } = this.deps;
     let previousSha = '';
-    let packagesChanged = false;
+    let hasTouchedPackages = false;
 
     try {
       previousSha = (await this.git(['rev-parse', 'HEAD'])).stdout.trim();
@@ -288,33 +302,37 @@ export class UpdateService {
       }
 
       const changed = await this.git(['diff', '--name-only', previousSha, 'HEAD']);
-      packagesChanged = /(^|\/)package(-lock)?\.json$/m.test(changed.stdout);
+      const packagesChanged = /(^|\/)package(-lock)?\.json$/m.test(changed.stdout);
+      const isInstallDeferred = packagesChanged && this.deps.installPackagesDuringRestart;
 
-      if (packagesChanged) {
+      if (packagesChanged && !isInstallDeferred) {
         this.setStep('Installing packages');
+        hasTouchedPackages = true;
         const install = await run('npm', ['ci', '--include=dev', '--no-audit', '--no-fund'], { cwd: repoRoot, timeoutMs: INSTALL_TIMEOUT_MS });
         if (!install.ok) {
-          await this.rollBack(previousSha, packagesChanged, `Installing the new packages failed. ${summarizeFailure(install)}`);
+          await this.rollBack(previousSha, hasTouchedPackages, `Installing the new packages failed. ${summarizeFailure(install)}`);
           return;
         }
       }
 
-      this.setStep('Building the new version');
-      const build = await run('npm', ['run', 'build'], { cwd: repoRoot, timeoutMs: BUILD_TIMEOUT_MS });
-      if (!build.ok) {
-        await this.rollBack(previousSha, packagesChanged, `Building the new version failed. ${summarizeFailure(build)}`);
-        return;
+      if (!isInstallDeferred) {
+        this.setStep('Building the new version');
+        const build = await run('npm', ['run', 'build'], { cwd: repoRoot, timeoutMs: BUILD_TIMEOUT_MS });
+        if (!build.ok) {
+          await this.rollBack(previousSha, hasTouchedPackages, `Building the new version failed. ${summarizeFailure(build)}`);
+          return;
+        }
+        await this.deps.writeBuildStamp();
       }
-      await this.deps.writeBuildStamp();
 
       this.setStep('Restarting');
       this.apply = { ...this.apply, state: 'restarting' };
       this.cachedCheck = null; // the next status reflects the new version
-      await this.deps.restart();
+      await this.deps.restart({ stopFirst: isInstallDeferred });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       if (previousSha !== '' && this.apply.state === 'updating') {
-        await this.rollBack(previousSha, packagesChanged, `The update stopped unexpectedly. ${reason}`);
+        await this.rollBack(previousSha, hasTouchedPackages, `The update stopped unexpectedly. ${reason}`);
       } else {
         this.fail(`The app could not restart itself. ${reason}`);
       }
@@ -322,7 +340,7 @@ export class UpdateService {
   }
 
   /** Put the previous version back, so a failed update leaves the app working. */
-  private async rollBack(previousSha: string, packagesChanged: boolean, reason: string): Promise<void> {
+  private async rollBack(previousSha: string, hasTouchedPackages: boolean, reason: string): Promise<void> {
     const { repoRoot, run } = this.deps;
     this.setStep('Restoring the previous version');
     const reset = await this.git(['reset', '--hard', previousSha]);
@@ -330,7 +348,7 @@ export class UpdateService {
       this.fail(`${reason} Restoring the previous version also failed: ${summarizeFailure(reset)}`);
       return;
     }
-    if (packagesChanged) {
+    if (hasTouchedPackages) {
       await run('npm', ['ci', '--include=dev', '--no-audit', '--no-fund'], { cwd: repoRoot, timeoutMs: INSTALL_TIMEOUT_MS });
     }
     const rebuild = await run('npm', ['run', 'build'], { cwd: repoRoot, timeoutMs: BUILD_TIMEOUT_MS });

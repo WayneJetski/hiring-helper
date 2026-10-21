@@ -65,8 +65,9 @@ function makeService(
     run,
     isManagedInstall: true,
     readVersion: () => '2.0.0',
-    restart: async () => {
-      events.push('restart');
+    installPackagesDuringRestart: false,
+    restart: async ({ stopFirst }) => {
+      events.push(stopFirst ? 'restart-stop-first' : 'restart');
     },
     writeBuildStamp: async () => {
       events.push('stamp');
@@ -238,6 +239,41 @@ test('packages are installed first when package files changed', async () => {
   assert.ok(install !== -1 && build > install);
 });
 
+test('when the install must wait for the restart, the server is stopped first and installs nothing itself', async () => {
+  const { service, calls, events } = makeService(
+    { ...behindRemote, 'git diff --name-only': ok('package-lock.json\nserver/src/index.ts\n') },
+    { installPackagesDuringRestart: true }
+  );
+  await service.startUpdate(false);
+  await settle(service);
+  assert.equal(calls.some((call) => call.startsWith('npm ')), false, 'no npm while the server holds its native module');
+  assert.deepEqual(events, ['restart-stop-first']);
+  assert.equal((await service.getStatus()).apply.state, 'restarting');
+});
+
+test('a source-only update still builds in place even where installs wait for the restart', async () => {
+  const { service, calls, events } = makeService(behindRemote, { installPackagesDuringRestart: true });
+  await service.startUpdate(false);
+  await settle(service);
+  assert.ok(calls.includes('npm run build'));
+  assert.deepEqual(events, ['stamp', 'restart']);
+});
+
+test('a deferred install that cannot restart is rolled back without reinstalling packages', async () => {
+  const { service, calls } = makeService(
+    { ...behindRemote, 'git diff --name-only': ok('package.json\n') },
+    {
+      installPackagesDuringRestart: true,
+      restart: async () => {
+        throw new Error('spawn ENOENT');
+      },
+    }
+  );
+  await service.startUpdate(false);
+  await settle(service);
+  assert.equal(calls.some((call) => call.startsWith('npm ci')), false);
+});
+
 test('only one update runs at a time', async () => {
   const { service } = makeService(behindRemote);
   assert.deepEqual(await service.startUpdate(false), { ok: true });
@@ -309,6 +345,27 @@ test('a restart that cannot be started is reported as a failure', async () => {
   const { apply } = await service.getStatus();
   assert.equal(apply.state, 'failed');
   assert.match(apply.error ?? '', /could not restart itself.*ENOENT/);
+});
+
+// ---- failure summaries ----
+
+test('the real npm cause is kept even though npm prefixes every line with "npm error"', () => {
+  const summary = summarizeFailure({
+    stdout: '',
+    stderr: [
+      'npm error code EBUSY',
+      "npm error syscall rmdir",
+      "npm error EBUSY: resource busy or locked, unlink 'C:\\app\\node_modules\\better-sqlite3\\build\\Release\\better_sqlite3.node'",
+      'npm error A complete log of this run can be found in: C:\\logs',
+    ].join('\n'),
+  });
+  assert.match(summary, /EBUSY/);
+  assert.match(summary, /better_sqlite3\.node/);
+  assert.doesNotMatch(summary, /^npm error/);
+});
+
+test('a failure with no recognisable error falls back to the readable lines', () => {
+  assert.equal(summarizeFailure({ stdout: 'npm warn x\nsomething odd happened', stderr: '' }), 'something odd happened');
 });
 
 // ---- environment for git and npm ----

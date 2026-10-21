@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Request, Response } from 'express';
 import { UpdateService, commandEnvironment, type CommandRunner } from '../services/update.service.js';
+import { buildRestartCommand } from '../utils/restart-command.js';
 import { scoringService } from '../services/scoring-runtime.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -43,15 +44,15 @@ function readVersion(): string {
 }
 
 /** The CLI stops this process and starts a fresh one, so it must outlive us (detached). */
-function startDetachedRestart(): Promise<void> {
+function startDetachedRestart(options: { stopFirst: boolean }): Promise<void> {
   return new Promise((resolve, reject) => {
-    const cli = join(REPO_ROOT, 'bin', IS_WINDOWS ? 'hiring-helper.cmd' : 'hiring-helper');
-    const child = spawn(cli, ['restart', '--no-open'], {
+    const command = buildRestartCommand(REPO_ROOT, IS_WINDOWS, options);
+    const child = spawn(command.file, command.args, {
       cwd: REPO_ROOT,
       detached: true,
       stdio: 'ignore',
-      shell: IS_WINDOWS,
       windowsHide: true,
+      windowsVerbatimArguments: command.windowsVerbatimArguments,
     });
     child.once('error', reject);
     child.once('spawn', () => {
@@ -66,6 +67,7 @@ const updateService = new UpdateService({
   run: runCommand,
   isManagedInstall: process.env.HIRING_HELPER_MANAGED === '1',
   readVersion,
+  installPackagesDuringRestart: IS_WINDOWS,
   restart: startDetachedRestart,
   writeBuildStamp: async () => {
     const runtimeDir = join(REPO_ROOT, '.runtime');
