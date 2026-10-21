@@ -327,7 +327,7 @@ export class ScoringService {
   private spawnErrorMessage(error: unknown): string {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('ENOENT')) {
-      return 'Claude Code CLI (`claude`) not found on PATH. Install it and log in on the server host (see SETUP.md, section 3).';
+      return 'Claude Code CLI (`claude`) not found on PATH. Install it and sign in on this computer.';
     }
     console.error('Could not start the scoring run:', message);
     return 'Could not start Claude Code. Check the server log for details.';

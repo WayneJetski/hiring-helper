@@ -356,8 +356,7 @@ export function SetupScreen({
           </p>
         )}
         <p className="setup-hint">
-          Scoring uses the Claude account that Claude Code is signed in to. Installation steps are in
-          SETUP.md.
+          Scoring uses the Claude account that Claude Code is signed in to.
         </p>
       </section>
     </div>
