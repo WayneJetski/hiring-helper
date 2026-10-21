@@ -5,6 +5,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { accountFor, type CredentialStore } from '../config/credential-store.js';
+import { config } from '../config/env.config.js';
 
 import { SetupService, parseClaudeVersion } from './setup.service.js';
 
@@ -189,3 +194,63 @@ test(
     assert.equal(config.bambooHR.apiKey, 'good-key', 'the saved key is untouched');
   })
 );
+
+// ---- where the saved key goes ----
+
+
+function savingFixture(store: CredentialStore): { saving: SetupService; readEnvFile: () => string } {
+  const envFile = join(mkdtempSync(join(tmpdir(), 'hh-setup-')), '.env');
+  writeFileSync(envFile, 'BAMBOOHR_API_KEY=\nPORT=3000\n');
+  const saving = new SetupService(async () => null, null, Date.now, signedOutAuth, store, envFile);
+  return { saving, readEnvFile: (): string => readFileSync(envFile, 'utf-8') };
+}
+
+test('a saved API key goes to the credential store and never into the .env file', async () => {
+  const items = new Map<string, string>();
+  const store: CredentialStore = {
+    read: (account) => items.get(account) ?? null,
+    write: (account, secret) => void items.set(account, secret),
+    remove: (account) => void items.delete(account),
+  };
+  const { saving, readEnvFile } = savingFixture(store);
+
+  await saving.saveCredentials('super-secret-key', 'acme');
+
+  assert.equal(items.get(accountFor('acme')), 'super-secret-key');
+  assert.doesNotMatch(readEnvFile(), /super-secret-key/);
+  assert.match(readEnvFile(), /BAMBOOHR_SUBDOMAIN=acme/);
+  assert.match(readEnvFile(), /PORT=3000/, 'unrelated settings are kept');
+  assert.equal(config.bambooHR.apiKey, 'super-secret-key', 'applied in memory without a restart');
+  assert.equal(process.env.BAMBOOHR_API_KEY, undefined, 'child processes must not inherit the key');
+});
+
+test('switching to another company forgets the first company\'s stored key', async () => {
+  const items = new Map<string, string>([[accountFor('acme'), 'old-key']]);
+  const store: CredentialStore = {
+    read: (account) => items.get(account) ?? null,
+    write: (account, secret) => void items.set(account, secret),
+    remove: (account) => void items.delete(account),
+  };
+  const { saving } = savingFixture(store);
+  await saving.saveCredentials('k1', 'acme');
+  await saving.saveCredentials('k2', 'globex');
+  assert.equal(items.has(accountFor('acme')), false);
+  assert.equal(items.get(accountFor('globex')), 'k2');
+});
+
+test('where no credential store exists the key falls back to the owner-only .env file', async () => {
+  const unavailable: CredentialStore = {
+    read: () => {
+      throw new Error('none');
+    },
+    write: () => {
+      throw new Error('none');
+    },
+    remove: () => {
+      throw new Error('none');
+    },
+  };
+  const { saving, readEnvFile } = savingFixture(unavailable);
+  await saving.saveCredentials('fallback-key', 'acme');
+  assert.match(readEnvFile(), /BAMBOOHR_API_KEY=fallback-key/);
+});

@@ -6,9 +6,15 @@
  * the mode bits.)
  */
 
-import { promises as fs } from 'node:fs';
+import { chmodSync, promises as fs, writeFileSync } from 'node:fs';
 
 export async function writePrivateFile(filePath: string, content: string): Promise<void> {
   await fs.writeFile(filePath, content, { encoding: 'utf-8', mode: 0o600 });
   await fs.chmod(filePath, 0o600);
+}
+
+/** Same as writePrivateFile, for start-up code that cannot await. */
+export function writePrivateFileSync(filePath: string, content: string): void {
+  writeFileSync(filePath, content, { encoding: 'utf-8', mode: 0o600 });
+  chmodSync(filePath, 0o600);
 }

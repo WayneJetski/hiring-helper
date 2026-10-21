@@ -54,7 +54,7 @@ Applicant-supplied links (LinkedIn, website) are shown only if they are plain `h
 
 ## Files and dependencies
 
-- `.env` (the API key) is written owner-only (`0600`), including when an existing file had looser permissions.
+- The API key is kept in the operating system's credential store (macOS Keychain, Windows Credential Manager, Linux Secret Service), one entry per company address, so it is not in any file to be copied by a backup, a zip or a synced folder. It is held in memory while the app runs and is never placed in the process environment, so git, npm and Claude Code child processes do not inherit it. A key found in `.env` (an older install) is moved into the store and blanked in the file at the next start. Where no credential store exists, the key stays in `.env`, which is written owner-only (`0600`), including when an existing file had looser permissions.
 - `server/data/` (database, backups, résumé and summary caches) is owner-only (`0700`).
 - Résumé downloads from BambooHR are capped at 25 MB.
 - The Node.js download in the launcher scripts is verified against the checksum list published with it.
@@ -65,13 +65,13 @@ Applicant-supplied links (LinkedIn, website) are shown only if they are plain `h
 1. **Create a dedicated BambooHR API key** for a BambooHR user whose permissions are as small as possible: Hiring access only, and no employee or payroll data. The key can do whatever that user can do, whatever this app does with it.
 2. Run it as a normal user, never as administrator or root, and keep the computer's disk encrypted.
 3. Keep Claude Code up to date. Do not run the scoring skill in a session where you have granted Claude broad shell or network permissions if you are about to open résumés you do not trust; the unattended "Score new applicants" button already runs without them.
-4. Treat the `.env` file and `server/data/` like passwords and personal data: do not commit, email or sync them.
+4. Treat `server/data/` like personal data (and `.env` like a password file if your computer has no credential store): do not commit, email or sync them.
 5. Update when the banner says so; updates are always your click.
 
 ## Known limits
 
 - **A process that can run commands can forge a browser's headers.** The browser-only checks stop web pages and careless scripts, not a shell on your computer. In particular, if you run `/score-candidates` yourself in a Claude Code session that has shell access, a hostile résumé could try to get that Claude to call the app's API with forged headers. Only run the skill in a session without shell access (the app's "Score new applicants" button already does), or review every command it asks to run.
-- Anything running as you on your computer (a shell, another program) can read `.env` and `server/data/` and can send requests to the app. This tool protects against web pages, hostile applicant content and AI mistakes, not against malware that already runs as you.
+- Anything running as you on your computer (a shell, another program) can read `server/data/`, can ask the credential store for the API key (macOS may show a prompt; Windows will not), and can send requests to the app. This tool protects against web pages, hostile applicant content and AI mistakes, not against malware that already runs as you.
 - The project's `.claude/settings.json` denies Claude Code reading or editing `.env` and running `curl` against the write endpoints. Those rules are best-effort friction for interactive sessions (a shell can read the file or send the request in many other ways); the guarantees above do not depend on them.
 
 ## Reporting a problem
