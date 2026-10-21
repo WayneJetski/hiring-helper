@@ -413,7 +413,7 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
   if (error) {
     return (
       <div className="applicants-list">
-        <div className="error" role="alert">
+        <div className="load-error" role="alert">
           <p>We could not load the applicants.</p>
           <p className="error-detail">{error}</p>
           <button type="button" className="retry-button" onClick={() => void refetch()}>

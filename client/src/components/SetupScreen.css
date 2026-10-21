@@ -114,6 +114,12 @@
   margin-top: 1rem;
   padding: 0.7rem 0.9rem;
   border-radius: 8px;
+  line-height: 1.5;
+}
+
+/* Icons are 1em tall, so (line-height - 1em) / 2 centres them on line one. */
+.setup-result > .icon {
+  margin-top: 0.25em;
 }
 
 .setup-result.success {

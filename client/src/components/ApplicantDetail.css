@@ -214,13 +214,13 @@
 }
 
 .loading,
-.error {
+.load-error {
   text-align: center;
   padding: 3rem;
   color: var(--hh-muted);
 }
 
-.error {
+.load-error {
   color: #dc3545;
 }
 
