@@ -6,12 +6,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApplicant } from '../hooks/useApplicant';
+import { useScoreApplicant } from '../hooks/useScoreApplicant';
 import { apiService } from '../services/api.service';
 import { AISummaryCard } from './AISummaryCard';
 import { ResumeModal } from './ResumeModal';
 import { StageMover } from './StageMover';
 import { ApplicantDetailSkeleton } from './PageSkeletons';
 import { Icon } from './icons/Icon';
+import { StatusIcon } from './icons/StatusIcon';
 import { RatingStars } from './icons/RatingStars';
 import type { Status } from '../types/applicant.types';
 import { getNeighbors, loadNavigationIds } from '../utils/applicantNavigation';
@@ -36,6 +38,13 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
   const applicantId = id ? parseInt(id, 10) : null;
 
   const { applicant, loading, error, refetch } = useApplicant(applicantId);
+
+  const {
+    scoringApplicationId,
+    notice: scoreNotice,
+    dismissNotice: dismissScoreNotice,
+    scoreApplicant,
+  } = useScoreApplicant(refetch);
 
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [isResumeOpen, setIsResumeOpen] = useState<boolean>(false);
@@ -195,6 +204,21 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
         )}
       </div>
 
+      {scoreNotice && (
+        <div className={`sync-message ${scoreNotice.tone} detail-notice`} role="status">
+          <StatusIcon tone={scoreNotice.tone} />
+          <span>{scoreNotice.text}</span>
+          <button
+            type="button"
+            className="detail-notice-dismiss"
+            onClick={dismissScoreNotice}
+            aria-label="Dismiss"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      )}
+
       <div className="detail-container">
         <header className="detail-header">
           <div className="header-main">
@@ -203,29 +227,23 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
               {applicant.jobTitle} · Applied {formatDate(applicant.appliedDate)}
             </p>
             <div className="header-badges">
-              <span className="stage-badge">{applicant.stage}</span>
+              <span className="header-badge stage-badge">{applicant.stage}</span>
               {applicant.confidence !== undefined ? (
                 <span
-                  className={`confidence-badge ${getConfidenceClass(applicant.confidence)}`}
+                  className={`header-badge confidence-badge ${getConfidenceClass(applicant.confidence)}`}
                   data-help="match"
                 >
                   {applicant.confidence}% · {getConfidenceLevel(applicant.confidence)}
                 </span>
               ) : (
-                <span className="not-scored-badge" data-help="match">
+                <span className="header-badge not-scored-badge" data-help="match">
                   Not scored yet
                 </span>
               )}
               {applicant.flags?.map((flag) => (
-                <span key={flag} className={`flag-badge flag-${flag}`}>
-                  {FLAG_DISPLAY[flag] ? (
-                    <>
-                      <Icon name={FLAG_DISPLAY[flag].icon} size={13} />
-                      {FLAG_DISPLAY[flag].label}
-                    </>
-                  ) : (
-                    flag
-                  )}
+                <span key={flag} className="header-badge header-flag">
+                  <Icon name="flag" isFilled />
+                  {FLAG_DISPLAY[flag]?.label ?? flag}
                 </span>
               ))}
             </div>
@@ -243,6 +261,28 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
                   <Icon name="fileText" /> View résumé
                 </button>
               )}
+              <button
+                type="button"
+                className="resume-button"
+                onClick={() => void scoreApplicant(applicant.id, applicant.name)}
+                disabled={scoringApplicationId !== null}
+                title="Score this applicant against the job's scoring criteria"
+                data-help="score-applicant"
+              >
+                {scoringApplicationId === applicant.id ? (
+                  <>
+                    <Icon name="loader" isSpinning /> Scoring…
+                  </>
+                ) : applicant.confidence !== undefined ? (
+                  <>
+                    <Icon name="repeat" /> Rescore applicant
+                  </>
+                ) : (
+                  <>
+                    <Icon name="target" /> Score applicant
+                  </>
+                )}
+              </button>
               {bambooHRLink && (
                 <a
                   className="resume-button"

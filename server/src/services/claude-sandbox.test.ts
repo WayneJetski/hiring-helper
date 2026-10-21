@@ -6,18 +6,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
   SCORING_MCP_TOOLS,
-  scopedMcpConfig,
+  projectMcpConfig,
   WITHHELD_MCP_TOOLS,
   claudeChildEnvironment,
   scoringSandboxArguments,
 } from './claude-sandbox.js';
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const PROJECT_ROOT = resolve(SRC_DIR, '../..');
 
 /** Tool names registered by the MCP server, read from its source. */
 function registeredMcpToolNames(): string[] {
@@ -29,10 +30,13 @@ function registeredMcpToolNames(): string[] {
 }
 
 test('a scoring run keeps only the Skill built-in and loads only the project MCP config', () => {
-  const args = scoringSandboxArguments('/repo');
+  const args = scoringSandboxArguments(PROJECT_ROOT);
   assert.equal(args[args.indexOf('--tools') + 1], 'Skill');
   assert.ok(args.includes('--strict-mcp-config'));
-  assert.equal(args[args.indexOf('--mcp-config') + 1], join('/repo', '.mcp.json'));
+  assert.deepEqual(
+    Object.keys(JSON.parse(args[args.indexOf('--mcp-config') + 1]).mcpServers),
+    ['hiring-helper']
+  );
   // Variadic, so it must come last or it would swallow the flags after it.
   assert.equal(args.indexOf('--allowedTools') < args.length - 1, true);
   assert.equal(args.slice(args.indexOf('--allowedTools') + 1).some((arg) => arg.startsWith('--')), false);
@@ -49,7 +53,7 @@ test('every registered MCP tool is either allowed or withheld from a scoring run
 });
 
 test('a scoring run cannot rewrite the posting, sync, or browse other candidates', () => {
-  const args = scoringSandboxArguments('/repo');
+  const args = scoringSandboxArguments(PROJECT_ROOT);
   const denied = args.slice(args.indexOf('--disallowedTools') + 1, args.indexOf('--allowedTools'));
   for (const tool of ['save_job_posting', 'sync_from_bamboohr', 'list_applicants']) {
     assert.ok(denied.includes(`mcp__hiring-helper__${tool}`), tool);
@@ -76,15 +80,27 @@ test('building the child environment does not change the server\'s own', () => {
 });
 
 test('a batch is passed to the MCP server so it refuses every other application', () => {
-  const root = resolve(SRC_DIR, '../..');
-  const config = JSON.parse(scopedMcpConfig(root, [101, 102])) as {
-    mcpServers: Record<string, { command: string; env?: Record<string, string> }>;
+  const config = JSON.parse(projectMcpConfig(PROJECT_ROOT, [101, 102])) as {
+    mcpServers: Record<string, { env?: Record<string, string> }>;
   };
-  const server = config.mcpServers['hiring-helper'];
-  assert.equal(server.command, 'node', 'the project definition is kept');
-  assert.equal(server.env?.HIRING_HELPER_SCORING_SCOPE, '101,102');
+  assert.equal(config.mcpServers['hiring-helper'].env?.HIRING_HELPER_SCORING_SCOPE, '101,102');
 
-  const args = scoringSandboxArguments(root, [101, 102]);
+  const args = scoringSandboxArguments(PROJECT_ROOT, [101, 102]);
   assert.match(args[args.indexOf('--mcp-config') + 1], /HIRING_HELPER_SCORING_SCOPE/);
-  assert.match(scoringSandboxArguments(root)[scoringSandboxArguments(root).indexOf('--mcp-config') + 1], /\.mcp\.json$/);
+});
+
+test('without ids the MCP server is left unscoped', () => {
+  const config = JSON.parse(projectMcpConfig(PROJECT_ROOT)) as {
+    mcpServers: Record<string, { env?: Record<string, string> }>;
+  };
+  assert.equal(config.mcpServers['hiring-helper'].env, undefined);
+});
+
+test('the MCP server runs on the same Node as this server, not whichever is first on PATH', () => {
+  // Regression: a Homebrew Node ahead of an nvm Node on the child's PATH crashed
+  // better-sqlite3 (NODE_MODULE_VERSION mismatch), so no tools loaded and 0 were scored.
+  const config = JSON.parse(projectMcpConfig(PROJECT_ROOT, [1])) as {
+    mcpServers: Record<string, { command: string }>;
+  };
+  assert.equal(config.mcpServers['hiring-helper'].command, process.execPath);
 });

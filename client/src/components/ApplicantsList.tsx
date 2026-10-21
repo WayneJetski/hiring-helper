@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApplicants } from '../hooks/useApplicants';
+import { useScoreApplicant } from '../hooks/useScoreApplicant';
 import { apiService } from '../services/api.service';
 import { ApplicantsFilters } from './ApplicantsFilters';
 import { Icon } from './icons/Icon';
@@ -180,6 +181,12 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     setDataVersion((version) => version + 1);
   }, [refetch, reloadJobs]);
 
+  const {
+    notice: scoreNotice,
+    dismissNotice: dismissScoreNotice,
+    scoreApplicant,
+  } = useScoreApplicant(handleDataChanged);
+
   const handleJobChange = useCallback((jobId: number | null): void => {
     setSelectedJobId(jobId);
     setSelectedStatusIds(loadSelectedStatusIds(jobId)); // each job keeps its own filter
@@ -252,6 +259,11 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
       },
     ],
     [
+      {
+        label: applicant.confidence !== undefined ? 'Rescore Applicant' : 'Score Applicant',
+        icon: applicant.confidence !== undefined ? 'repeat' : 'target',
+        onSelect: () => void scoreApplicant(applicant.id, applicant.name),
+      },
       { label: 'View résumé', icon: 'fileText', onSelect: () => setResumeApplicantId(applicant.id) },
       { label: 'View profile', icon: 'user', onSelect: () => handleRowClick(applicant) },
     ],
@@ -483,6 +495,21 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
         <div className={`sync-message ${syncNotice.tone}`} role="status">
           <StatusIcon tone={syncNotice.tone} />
           <span>{syncNotice.text}</span>
+        </div>
+      )}
+
+      {scoreNotice && (
+        <div className={`sync-message ${scoreNotice.tone} row-notice`} role="status">
+          <StatusIcon tone={scoreNotice.tone} />
+          <span>{scoreNotice.text}</span>
+          <button
+            type="button"
+            className="row-notice-dismiss"
+            onClick={dismissScoreNotice}
+            aria-label="Dismiss"
+          >
+            <Icon name="close" />
+          </button>
         </div>
       )}
 

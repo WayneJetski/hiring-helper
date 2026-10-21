@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '../services/api.service';
 import type { ScoringStatus } from '../types/applicant.types';
 import { ScoringProgress } from './ScoringProgress';
+import { describeBatchOutcome } from '../utils/scoreApplicantOutcome';
 import { Icon } from './icons/Icon';
 import { StatusIcon } from './icons/StatusIcon';
 import './ScoringControls.css';
@@ -187,7 +188,7 @@ export function ScoringControls({
   // A job that has not been set up cannot be scored (the server enforces this too).
   const isBlocked = jobId !== null && readiness !== null && !readiness.isReadyToScore;
 
-  const finishedTone = scoreStatus?.cancelled ? 'warning' : scoreStatus?.ok ? 'success' : 'error';
+  const finishedNotice = scoreStatus ? describeBatchOutcome(scoreStatus) : null;
 
   return (
     <>
@@ -303,16 +304,10 @@ export function ScoringControls({
         </div>
       )}
 
-      {!isScoring && scoreStatus?.finishedAt && (
-        <div className={`action-panel sync-message ${finishedTone}`}>
-          <StatusIcon tone={finishedTone} />
-          <span>
-            {scoreStatus.cancelled
-              ? `Scoring was cancelled. ${scoreStatus.scored} applicant${scoreStatus.scored !== 1 ? 's were' : ' was'} scored before it stopped.`
-              : scoreStatus.ok
-                ? `Scoring finished: ${scoreStatus.scored} scored.`
-                : (scoreStatus.error ?? 'Scoring failed.')}
-          </span>
+      {!isScoring && scoreStatus?.finishedAt && finishedNotice && (
+        <div className={`action-panel sync-message ${finishedNotice.tone}`}>
+          <StatusIcon tone={finishedNotice.tone} />
+          <span>{finishedNotice.text}</span>
         </div>
       )}
     </>

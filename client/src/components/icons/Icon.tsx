@@ -175,6 +175,12 @@ const ICON_PATHS = {
       <path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20" />
     </>
   ),
+  flag: (
+    <>
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <path d="M4 22v-7" />
+    </>
+  ),
   loader: <path d="M21 12a9 9 0 11-6.2-8.6" />,
 } satisfies Record<string, ReactNode>;
 

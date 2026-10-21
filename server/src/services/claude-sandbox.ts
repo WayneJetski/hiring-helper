@@ -53,16 +53,26 @@ export const SCORING_MCP_TOOLS = SCORING_TOOL_NAMES.map(mcpToolId);
 export const WITHHELD_MCP_TOOLS = WITHHELD_TOOL_NAMES.map(mcpToolId);
 
 /**
- * The project's MCP config with the batch of applications this run may touch added to
- * the hiring-helper server's environment. Returns the config as JSON text, which
- * `--mcp-config` accepts in place of a file path.
+ * The project's MCP config as JSON text (which `--mcp-config` accepts in place of a
+ * file path), with two changes for an unattended run:
+ *
+ * - `node` becomes the Node that is running this server. The child Claude finds
+ *   `node` on its own PATH, which can be a different install (nvm and Homebrew are
+ *   common together), and `better-sqlite3` is compiled for one Node version only: the
+ *   MCP server then crashes at start-up, Claude has no tools, and the run "finishes"
+ *   with nothing scored. This server loaded the module, so its Node is a safe one.
+ * - Given the application ids the run may touch, they go into the hiring-helper
+ *   server's environment so it refuses every other application.
  */
-export function scopedMcpConfig(repoRoot: string, applicationIds: number[]): string {
+export function projectMcpConfig(repoRoot: string, applicationIds?: number[]): string {
   const config = JSON.parse(readFileSync(join(repoRoot, '.mcp.json'), 'utf-8')) as {
-    mcpServers: Record<string, { env?: Record<string, string> }>;
+    mcpServers: Record<string, { command?: string; env?: Record<string, string> }>;
   };
   const server = config.mcpServers['hiring-helper'];
-  server.env = { ...server.env, [SCORING_SCOPE_VARIABLE]: applicationIds.join(',') };
+  if (server.command === 'node') server.command = process.execPath;
+  if (applicationIds !== undefined && applicationIds.length > 0) {
+    server.env = { ...server.env, [SCORING_SCOPE_VARIABLE]: applicationIds.join(',') };
+  }
   return JSON.stringify(config);
 }
 
@@ -71,13 +81,12 @@ export function scopedMcpConfig(repoRoot: string, applicationIds: number[]): str
  * Given the batch's application ids, the MCP server also refuses any other application.
  */
 export function scoringSandboxArguments(repoRoot: string, applicationIds?: number[]): string[] {
-  const hasBatch = applicationIds !== undefined && applicationIds.length > 0;
   return [
     '--tools',
     ...SCORING_BUILTIN_TOOLS,
     '--strict-mcp-config',
     '--mcp-config',
-    hasBatch ? scopedMcpConfig(repoRoot, applicationIds) : join(repoRoot, '.mcp.json'),
+    projectMcpConfig(repoRoot, applicationIds),
     '--disallowedTools',
     ...WITHHELD_MCP_TOOLS,
     // --allowedTools is variadic, so keep it last.

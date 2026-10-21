@@ -23,6 +23,19 @@
   color: var(--hh-primary);
 }
 
+.detail-notice {
+  margin-bottom: 1rem;
+}
+
+.detail-notice-dismiss {
+  margin-left: auto;
+  padding: 0.2rem;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
 .detail-container {
   background: white;
   border-radius: 12px;
@@ -39,6 +52,52 @@
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 1.5rem;
+}
+
+/* On wide screens the header is a grid, so the stage mover sits on the same row as the
+   stage and score badges: name and details on the left, buttons above the mover on the
+   right. .header-main and .header-actions dissolve (display: contents) so their children
+   can be placed individually; on narrow screens they stack as before. */
+@media (min-width: 769px) {
+  .detail-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 1.5rem;
+    row-gap: 0.35rem;
+  }
+
+  .header-main,
+  .header-actions {
+    display: contents;
+  }
+
+  .detail-header h1 {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .header-subtitle {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .header-badges {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .header-buttons {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: start;
+  }
+
+  .header-actions > .stage-move {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 0.5rem; /* the same offset as .header-badges, so the two rows line up */
+  }
 }
 
 .header-main {
@@ -62,13 +121,37 @@
   margin-top: 0.5rem;
 }
 
-.not-scored-badge {
+/* Stage, match and flag tags share one shape, size and type; only colour tells them apart. */
+.header-badges .header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.25rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 600;
-  opacity: 0.9;
+  line-height: 1.25;
+  white-space: nowrap;
+  opacity: 1;
+}
+
+.header-badges .stage-badge {
+  border-color: white;
+}
+
+.header-badges .not-scored-badge {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.header-badges .header-flag {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--hh-primary-hover);
+  border-color: white;
+}
+
+.header-flag .icon {
+  color: #d32f2f;
 }
 
 .header-actions {

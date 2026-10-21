@@ -130,6 +130,7 @@ The server ships an MCP (Model Context Protocol) server that exposes the local c
 - A project `.mcp.json` is included; Claude Code auto-detects it in this repo.
 - **Skill:** run `/score-candidates` in Claude Code to score a job's unscored applicants end to end.
 - **From the web UI:** the **Score new applicants** button spawns headless Claude Code (`claude -p`) to run that same skill for the selected job, sandboxed to the Skill + hiring-helper MCP tools. Requires the Claude Code CLI installed and authenticated on the host running the server; scoring spends tokens on that account.
+- **Score one applicant:** the **⋮** menu on a row (**Score Applicant** or **Rescore Applicant**) and the button on the applicant page score just that person, handy for trying out a job's criteria on a few candidates before scoring everyone.
 - **Re-score:** the **Re-score these applicants** button re-runs scoring over every candidate matching your current filter (overwriting their scores) using the job's current rubric — after you tweak a job's rubric, narrow the filter and re-score just that set. It previews the count and asks you to confirm first.
 - **Job-scoped:** candidates belong to a job; lists default to the current posting so you don't mix roles (`list_jobs` to see them).
 - **Per-job scoring config:** the **Job settings** button (next to the job selector) edits a job's posting text and its scoring system prompt (rubric). A per-job prompt overrides the global default (`server/prompts/ai-evaluation-system.txt`) for that job only.

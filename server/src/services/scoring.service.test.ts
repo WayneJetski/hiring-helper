@@ -266,6 +266,27 @@ test('a long id list runs as sequential batches, each a fresh claude session', (
   assert.match(status.message ?? '', /2 candidates in 2 batches/);
 });
 
+test('a single applicant is scored in one run, worded for a first score or a re-score', () => {
+  const first = makeBatchingService();
+  first.service.start({ jobId: 45, applicationIds: [77], total: 1, isRescore: false });
+  assert.equal(first.children.length, 1);
+  assert.match(first.prompts[0], /this 1 application ID/);
+  assert.match(first.prompts[0], /it has no score yet/);
+  assert.match(first.prompts[0], /IDs: 77\./);
+
+  const again = makeBatchingService();
+  again.service.start({ jobId: 45, applicationIds: [77], total: 1, isRescore: true });
+  assert.match(again.prompts[0], /RE-SCORE this 1 application ID/);
+  assert.match(again.prompts[0], /overwriting its existing score/);
+
+  again.children[0].emitLine(saveCall);
+  again.children[0].emitLine({ type: 'result', is_error: false, result: 'done' });
+  const status = again.service.getStatus();
+  assert.equal(status.running, false);
+  assert.equal(status.ok, true);
+  assert.equal(status.scored, 1);
+});
+
 test('an error in one batch stops the remaining batches', () => {
   const { service, children } = makeBatchingService();
   const ids = Array.from({ length: SCORING_BATCH_SIZE * 2 }, (_, i) => i + 1);

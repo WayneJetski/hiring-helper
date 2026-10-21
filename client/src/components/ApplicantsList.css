@@ -91,15 +91,27 @@
   line-height: 1.5;
 }
 
-/* Icons are 1em tall, so (line-height - 1em) / 2 centres them on line one. */
+/* The icon gets a box as tall as one line of text (line-height 1.5 = 1em of icon plus
+   0.5em of padding), so it is centred on the first line whether the notice aligns its
+   items to the top (wrapping text) or to the centre (.claude-banner). A margin offset
+   only worked for the first and pushed the icon down in the second. The extra top
+   padding is a small optical nudge: lowercase text reads lower than its line box. */
 .sync-message > .icon {
-  margin-top: 0.25em;
+  box-sizing: content-box;
+  padding-top: 0.3em;
+  padding-bottom: 0.2em;
 }
 
 .sync-message.success {
   color: #155724;
   background-color: #d4edda;
   border: 1px solid #c3e6cb;
+}
+
+.sync-message.info {
+  color: #0c4a6e;
+  background-color: #e0f2fe;
+  border: 1px solid #bae6fd;
 }
 
 .sync-message.error {

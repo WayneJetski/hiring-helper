@@ -370,6 +370,20 @@ export class ApplicantQueryService {
   }
 
   /**
+   * The job an application belongs to and whether it already has a score, so a
+   * single-applicant scoring request can be checked and worded correctly.
+   * Returns null when the application does not exist.
+   */
+  async findScoringTarget(
+    applicationId: number
+  ): Promise<{ jobId: number; hasScore: boolean } | null> {
+    const application = this.applicationsRepo.getById(applicationId);
+    if (!application) return null;
+    const score = await this.scoresRepo.getScore(applicationId);
+    return { jobId: application.jobId, hasScore: score !== null };
+  }
+
+  /**
    * Find active applications that do not yet have an AI score.
    * This is the work queue Claude pulls from when scoring candidates.
    * @param jobId - Optional: restrict to a single job posting.

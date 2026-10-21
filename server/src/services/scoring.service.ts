@@ -188,9 +188,11 @@ export class ScoringService {
   ): string {
     const scope = jobId ? `job ${jobId}${title ? ` (${title})` : ''}` : 'the current job';
     if (applicationIds && applicationIds.length > 0) {
+      const isSingle = applicationIds.length === 1;
+      const subject = isSingle ? 'this 1 application ID' : `these ${applicationIds.length} application IDs`;
       const task = isRescore
-        ? `RE-SCORE these ${applicationIds.length} application IDs for ${scope}, overwriting their existing scores and using the job's current rubric`
-        : `score these ${applicationIds.length} application IDs for ${scope} (none has a score yet), using the job's current rubric`;
+        ? `RE-SCORE ${subject} for ${scope}, overwriting ${isSingle ? 'its' : 'their'} existing ${isSingle ? 'score' : 'scores'} and using the job's current rubric`
+        : `score ${subject} for ${scope} (${isSingle ? 'it has no score' : 'none has a score'} yet), using the job's current rubric`;
       return (
         `Use the score-candidates skill to ${task} ` +
         `(call get_system_prompt). Score every listed id; skip the unscored-queue step. ` +

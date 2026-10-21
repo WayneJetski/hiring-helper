@@ -11,6 +11,9 @@ const controller = new ScoringController();
 // POST /api/score - start scoring a job's unscored candidates (headless Claude Code)
 router.post('/', (req, res) => controller.startScoring(req, res));
 
+// POST /api/score/applicant - score or re-score one applicant
+router.post('/applicant', (req, res) => controller.scoreApplicant(req, res));
+
 // Re-score every candidate matching the active filter (preview count, then run)
 router.post('/rescore/preview', (req, res) => controller.rescorePreview(req, res));
 router.post('/rescore', (req, res) => controller.rescore(req, res));

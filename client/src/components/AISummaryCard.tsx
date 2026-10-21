@@ -46,8 +46,9 @@ export function AISummaryCard({ summary }: AISummaryCardProps): JSX.Element {
         </h3>
         <p>This candidate has not been assessed yet.</p>
         <p className="hint">
-          Use <strong>Score new applicants</strong> on the Job Applicants page to assess this
-          candidate.
+          Use <strong>Score applicant</strong> at the top of this page to assess this candidate. To
+          score everyone who has no score yet, use <strong>Score new applicants</strong> on the Job
+          Applicants page.
         </p>
       </div>
     );
@@ -67,7 +68,8 @@ export function AISummaryCard({ summary }: AISummaryCardProps): JSX.Element {
 
       {summary.scoreAdjustment && (
         <p className="summary-adjustment">
-          Score lowered from {summary.scoreAdjustment.meritScore} by red-flag penalties:{' '}
+          Score lowered from {summary.scoreAdjustment.meritScore} to {summary.confidence} because of red-flag
+          penalties:{' '}
           {summary.scoreAdjustment.penalties
             .map((penalty) => `${FLAG_LABELS[penalty.flag] ?? penalty.flag} (${PENALTY_LABELS[penalty.penalty]})`)
             .join(', ')}

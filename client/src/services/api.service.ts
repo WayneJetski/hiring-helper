@@ -361,6 +361,20 @@ class ApiService {
   }
 
   /**
+   * Score one applicant, or re-score them when they already have a score.
+   */
+  async scoreApplicant(applicationId: number): Promise<StartScoringResult> {
+    try {
+      const response = await this.client.post<StartScoringResult>('/score/applicant', {
+        applicationId,
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error, 'Failed to start scoring');
+    }
+  }
+
+  /**
    * Preview how many candidates match the active filter for a re-score (read-only).
    */
   async rescorePreview(filter: {

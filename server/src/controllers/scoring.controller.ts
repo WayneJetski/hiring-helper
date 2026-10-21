@@ -101,6 +101,50 @@ export class ScoringController {
   }
 
   /**
+   * POST /api/score/applicant  { applicationId }
+   * Score (or re-score, when a score exists) a single applicant, so a job's
+   * criteria can be tried on a few people before running the whole list.
+   */
+  async scoreApplicant(
+    req: Request<unknown, unknown, { applicationId?: number }>,
+    res: Response
+  ): Promise<void> {
+    try {
+      const applicationId = req.body?.applicationId;
+      if (typeof applicationId !== 'number' || !Number.isInteger(applicationId)) {
+        res
+          .status(400)
+          .json({ error: 'Invalid request', message: 'applicationId must be a whole number' });
+        return;
+      }
+      const target = await applicantQueryService.findScoringTarget(applicationId);
+      if (!target) {
+        res.status(404).json({ error: 'Not found', message: 'Applicant not found' });
+        return;
+      }
+      const blocked = blockedBySetup(target.jobId);
+      if (blocked) {
+        res.status(409).json(blocked);
+        return;
+      }
+      res.json(
+        scoringService.start({
+          jobId: target.jobId,
+          applicationIds: [applicationId],
+          total: 1,
+          isRescore: target.hasScore,
+        })
+      );
+    } catch (error) {
+      console.error('Failed to start single-applicant scoring:', error);
+      res.status(500).json({
+        error: 'Failed to start scoring',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * POST /api/score/rescore/preview  { jobId, statusIds?, search?, active? }
    * Read-only: how many candidates match the active filter (would be re-scored).
    */
