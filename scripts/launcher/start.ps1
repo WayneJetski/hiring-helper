@@ -212,43 +212,49 @@ function Test-ClaudeSignedIn {
 # ------------------------------------------------------------- App install and build
 
 function Initialize-AppFiles {
-    Write-Step 'Checking app files'
-    # Building needs the development packages. A restart started by the running server
-    # would otherwise pass NODE_ENV=production on to npm.
-    Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
-    $envPath = Join-Path $RepoRoot '.env'
-    if (-not (Test-Path $envPath)) {
-        Copy-Item (Join-Path $RepoRoot '.env.example') $envPath
-    }
+    # npm reads package-lock.json from the current directory, and a person running
+    # `hiring-helper update` from anywhere (usually their home folder) is not in the repo.
+    Push-Location $RepoRoot
+    try {
+        Write-Step 'Checking app files'
+        # Building needs the development packages. A restart started by the running server
+        # would otherwise pass NODE_ENV=production on to npm.
+        Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
+        $envPath = Join-Path $RepoRoot '.env'
+        if (-not (Test-Path $envPath)) {
+            Copy-Item (Join-Path $RepoRoot '.env.example') $envPath
+        }
 
-    $installedMarker = Join-Path $RepoRoot 'node_modules\.package-lock.json'
-    $lockFile = Join-Path $RepoRoot 'package-lock.json'
-    $needsInstall = (-not (Test-Path $installedMarker)) -or
-        ((Get-Item $lockFile).LastWriteTime -gt (Get-Item $installedMarker).LastWriteTime)
-    if ($needsInstall) {
-        Write-Host 'Installing app packages (first run takes a few minutes)...'
-        Invoke-Checked 'npm' @('ci', '--include=dev', '--no-audit', '--no-fund') 'Installing the app packages failed'
-    }
+        $installedMarker = Join-Path $RepoRoot 'node_modules\.package-lock.json'
+        $lockFile = Join-Path $RepoRoot 'package-lock.json'
+        $needsInstall = (-not (Test-Path $installedMarker)) -or
+            ((Get-Item $lockFile).LastWriteTime -gt (Get-Item $installedMarker).LastWriteTime)
+        if ($needsInstall) {
+            Write-Host 'Installing app packages (first run takes a few minutes)...'
+            Invoke-Checked 'npm' @('ci', '--include=dev', '--no-audit', '--no-fund') 'Installing the app packages failed'
+        }
 
-    $builtOutputs = @(
-        (Join-Path $RepoRoot 'client\dist\index.html'),
-        (Join-Path $RepoRoot 'server\dist\index.js')
-    )
-    $isBuilt = ($builtOutputs | Where-Object { -not (Test-Path $_) }).Count -eq 0
-    $hasNewerSource = $false
-    if ($isBuilt -and (Test-Path $BuildStamp)) {
-        $stampTime = (Get-Item $BuildStamp).LastWriteTime
-        $newerSource = Get-ChildItem (Join-Path $RepoRoot 'client\src'), (Join-Path $RepoRoot 'server\src') -Recurse -File |
-            Where-Object { $_.LastWriteTime -gt $stampTime } |
-            Select-Object -First 1
-        $hasNewerSource = $null -ne $newerSource
+        $builtOutputs = @(
+            (Join-Path $RepoRoot 'client\dist\index.html'),
+            (Join-Path $RepoRoot 'server\dist\index.js')
+        )
+        $isBuilt = ($builtOutputs | Where-Object { -not (Test-Path $_) }).Count -eq 0
+        $hasNewerSource = $false
+        if ($isBuilt -and (Test-Path $BuildStamp)) {
+            $stampTime = (Get-Item $BuildStamp).LastWriteTime
+            $newerSource = Get-ChildItem (Join-Path $RepoRoot 'client\src'), (Join-Path $RepoRoot 'server\src') -Recurse -File |
+                Where-Object { $_.LastWriteTime -gt $stampTime } |
+                Select-Object -First 1
+            $hasNewerSource = $null -ne $newerSource
+        }
+        if ((-not $isBuilt) -or (-not (Test-Path $BuildStamp)) -or $hasNewerSource) {
+            Write-Host 'Building the app (first run takes a minute)...'
+            Invoke-Checked 'npm' @('run', 'build') 'Building the app failed'
+            New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
+            Set-Content -Path $BuildStamp -Value (Get-Date -Format o)
+        }
     }
-    if ((-not $isBuilt) -or (-not (Test-Path $BuildStamp)) -or $hasNewerSource) {
-        Write-Host 'Building the app (first run takes a minute)...'
-        Invoke-Checked 'npm' @('run', 'build') 'Building the app failed'
-        New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
-        Set-Content -Path $BuildStamp -Value (Get-Date -Format o)
-    }
+    finally { Pop-Location }
 }
 
 # ------------------------------------------------------------------------- Run

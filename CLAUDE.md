@@ -47,6 +47,7 @@ The REST server serves `client/dist` with an SPA fallback (`utils/client-assets.
 
 - `start` runs prerequisites (`scripts/launcher/setup.sh`, or the `Initialize-*` functions from `start.ps1`, which `hiring-helper.ps1` dot-sources; `start.ps1` runs its launcher only when not dot-sourced), then launches `node server/dist/index.js` in the background with `NODE_ENV=production` and `HIRING_HELPER_MANAGED=1`. It records `.runtime/server.pid` and logs to `.runtime/server.log` (Windows also `server.err.log`). A pid is trusted only if its command line is `server/dist/index.js`.
 - `restart` runs setup first, so a failed setup leaves the running copy alone.
+- Setup works from any directory: `Initialize-AppFiles` does `Push-Location $RepoRoot` before `npm ci`/`npm run build` (npm reads `package-lock.json` from the current directory, and people run `hiring-helper update` from their home folder).
 - Setup uses `npm ci --include=dev` with `NODE_ENV` unset: production mode makes `npm ci` drop TypeScript and Vite, and `npm install` would rewrite `package-lock.json` and dirty the clone.
 - `HH_SKIP_CLAUDE=1` skips Claude Code (CI, headless).
 
