@@ -18,6 +18,8 @@
 
 import axios, { type AxiosError, type AxiosInstance } from 'axios';
 import { config, isBambooHRConfigured } from '../config/env.config.js';
+import { buildBambooHRError, classifyBambooHRFailure } from '../errors/bamboohr-failure.js';
+import { UpstreamServiceError } from '../errors/upstream-error.js';
 
 export type BambooHRAccess = 'read-only' | 'status-write';
 
@@ -114,16 +116,38 @@ export function raiseBambooHRError(error: unknown, message: string): never {
     throw error;
   }
 
+  if (error instanceof UpstreamServiceError) throw error;
+
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError;
-    const status = axiosError.response?.status || 500;
-    const details = axiosError.response?.data || axiosError.message;
+    const upstreamStatus = axiosError.response?.status;
+    const kind = classifyBambooHRFailure(upstreamStatus, axiosError.code);
 
-    console.error(`BambooHR API Error: ${message}`, { status, details });
+    // The raw response (often an HTML gateway page) belongs in the log only.
+    console.error(`BambooHR API Error: ${message}`, {
+      status: upstreamStatus,
+      code: axiosError.code,
+      details: summarizeResponseBody(axiosError.response?.data) ?? axiosError.message,
+    });
 
-    throw new Error(`${message}: ${JSON.stringify(details)}`);
+    throw buildBambooHRError(kind, upstreamStatus, error);
   }
 
   console.error(`Unexpected error: ${message}`, error);
-  throw new Error(message);
+  throw buildBambooHRError('unknown', undefined, error);
+}
+
+const LOGGED_BODY_LIMIT = 500;
+
+/** A response body as a bounded string for the log (it can be a whole HTML page). */
+function summarizeResponseBody(body: unknown): string | undefined {
+  if (body === undefined || body === null || body === '') return undefined;
+  // Resume downloads use an arraybuffer, so the body may be binary.
+  if (typeof body !== 'string' && !isPlainObject(body)) return '[non-text response]';
+  const text = typeof body === 'string' ? body : JSON.stringify(body);
+  return text.length > LOGGED_BODY_LIMIT ? `${text.slice(0, LOGGED_BODY_LIMIT)}...` : text;
+}
+
+function isPlainObject(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && !ArrayBuffer.isView(value) && !(value instanceof ArrayBuffer);
 }

@@ -5,6 +5,8 @@
  */
 
 import type { Request, Response } from 'express';
+import { UpstreamServiceError } from '../errors/upstream-error.js';
+import { respondWithError } from '../errors/respond-with-error.js';
 import { ApplicantQueryService } from '../services/applicant-query.service.js';
 import { JobsRepository } from '../repositories/jobs.repository.js';
 import { JobDescriptionService } from '../services/job-description.service.js';
@@ -33,6 +35,10 @@ const rubricGeneratorService = new RubricGeneratorService();
  */
 function respondToGenerationError(error: unknown, res: Response): void {
   if (error instanceof ClaudeRunCancelledError) return;
+  if (error instanceof UpstreamServiceError) {
+    respondWithError(res, error, 'Failed to generate criteria');
+    return;
+  }
   const known: Array<[new (...args: never[]) => Error, number, string]> = [
     [JobNotFoundError, 404, 'Not found'],
     [MissingPostingError, 400, 'No job posting'],
@@ -47,10 +53,7 @@ function respondToGenerationError(error: unknown, res: Response): void {
     }
   }
   console.error('Failed to generate criteria:', error);
-  res.status(500).json({
-    error: 'Failed to generate criteria',
-    message: error instanceof Error ? error.message : 'Unknown error',
-  });
+  respondWithError(res, error, 'Failed to generate criteria');
 }
 
 /** An AbortSignal that fires if the browser disconnects before the reply is sent. */
@@ -99,10 +102,7 @@ export class JobsController {
       res.json({ data: jobs, count: jobs.length });
     } catch (error) {
       console.error('Failed to get jobs:', error);
-      res.status(500).json({
-        error: 'Failed to fetch jobs',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch jobs');
     }
   }
 
@@ -147,10 +147,7 @@ export class JobsController {
       res.json({ data: detail });
     } catch (error) {
       console.error('Failed to get job detail:', error);
-      res.status(500).json({
-        error: 'Failed to fetch job detail',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch job detail');
     }
   }
 
@@ -216,10 +213,7 @@ export class JobsController {
       res.json({ data: detail });
     } catch (error) {
       console.error('Failed to update job:', error);
-      res.status(500).json({
-        error: 'Failed to update job',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to update job');
     }
   }
 
@@ -252,10 +246,7 @@ export class JobsController {
       res.json({ data: { description } });
     } catch (error) {
       console.error('Failed to import posting:', error);
-      res.status(502).json({
-        error: 'Failed to import posting',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to import posting');
     }
   }
 

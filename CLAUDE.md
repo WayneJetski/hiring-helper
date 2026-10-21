@@ -161,6 +161,15 @@ Claude reads a candidate (`get_resume_text`, `get_job_description`), assesses fi
 - `syncJobs()` captures `posting_url`/`posted_date`/`status`/`title` into existing rows (`JobsRepository.updateMetadata`, update-only). `upsert` and `updateMetadata` touch only metadata columns (with `COALESCE`), so a sync never wipes `description` or `system_prompt`.
 - Posting text and rubric are writable from the web UI (`PATCH /api/jobs/:id` -> `saveJobPosting`/`saveSystemPrompt`), and the posting via the `save_job_posting` MCP tool. `getJobDescription` is DB-first, falling back to legacy `server/data/job-descriptions/*.txt`.
 
+### Upstream errors (`server/src/errors/`)
+
+BambooHR and Claude Code failures are wrapped before they can reach a screen. `UpstreamServiceError` carries a `kind` (`unavailable`, `rate_limited`, `unauthorized`, `forbidden`, `not_found`, `timeout`, `network`, `rejected`, `unknown`), a user-facing `message`, and the raw failure only as `cause` (logged where caught, never returned).
+
+- `raiseBambooHRError` (`bamboohr-http.ts`) maps HTTP status and network code through `classifyBambooHRFailure`. A gateway 503 HTML page used to be shown to the user verbatim. `isBambooRateLimitError` now reads `kind`, not message text.
+- Claude Code text (`claude-runner.ts`, `scoring.service.ts`) goes through `describeClaudeFailure`: overload, usage limit, billing, offline and signed-out are recognised; anything else becomes a generic message with the raw text in the log.
+- Controllers answer with `respondWithError`: upstream failures get their mapped status (503 unavailable, 429, 504, 502) plus `kind` and `isRetryable`; other errors keep the old 500 shape. Add new BambooHR/Claude call sites to this path rather than interpolating `error.message`.
+- **A temporary failure never says the key is bad.** `ConnectionTestResult.isTemporaryFailure` is set for outages, rate limits, timeouts and offline; the setup screen then shows "Check again" and keeps the saved key, and the saved-connection cache skips these results. Only 401, 403 and a wrong subdomain ask for a new key.
+
 ### MCP server (`server/src/mcp/`)
 
 - `index.ts` (stdio entry) imports `stdio-logging.ts` **first** to reroute `console.log`/`info`/`debug` to stderr: stdout is the JSON-RPC channel and the ingest/repository code is chatty. Then it inits the DB and connects `StdioServerTransport`.

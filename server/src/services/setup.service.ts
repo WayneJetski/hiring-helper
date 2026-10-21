@@ -17,6 +17,7 @@ import {
   isBambooHRConfigured,
   setBambooHRCredentials,
 } from '../config/env.config.js';
+import { buildBambooHRError, classifyBambooHRFailure } from '../errors/bamboohr-failure.js';
 import { writePrivateFile } from '../utils/private-file.js';
 import { upsertEnvLines } from '../utils/env-file.js';
 import { ClaudeAuthService } from './claude-auth.service.js';
@@ -39,6 +40,11 @@ export interface SetupStatus {
 export interface ConnectionTestResult {
   ok: boolean;
   message: string;
+  /**
+   * The failure says nothing about the key (BambooHR is down, rate limiting or
+   * unreachable), so the key should be kept and the check retried, not replaced.
+   */
+  isTemporaryFailure?: boolean;
 }
 
 /** Result of testing the credentials that are already saved. */
@@ -48,6 +54,8 @@ export interface SavedConnectionStatus {
   /** Null when not configured (nothing to test). */
   ok: boolean | null;
   message: string;
+  /** True when the check failed for a reason unrelated to the saved key (see ConnectionTestResult). */
+  isTemporaryFailure: boolean;
   /** When BambooHR was actually asked (ISO), so the UI can say "checked 5 min ago". */
   checkedAt: string | null;
 }
@@ -148,6 +156,7 @@ export class SetupService {
         subdomain: null,
         ok: null,
         message: 'BambooHR is not connected yet.',
+        isTemporaryFailure: false,
         checkedAt: null,
       };
     }
@@ -163,7 +172,18 @@ export class SetupService {
 
     if (!isFresh) {
       const result = await this.testConnection(config.bambooHR.apiKey, subdomain);
-      this.cachedConnection = { signature, checkedAtMs: nowMs, result };
+      // An outage proves nothing about the key and should not stick for a minute.
+      this.cachedConnection = result.isTemporaryFailure ? null : { signature, checkedAtMs: nowMs, result };
+      if (this.cachedConnection === null) {
+        return {
+          configured: true,
+          subdomain,
+          ok: false,
+          message: result.message,
+          isTemporaryFailure: true,
+          checkedAt: new Date(nowMs).toISOString(),
+        };
+      }
     }
 
     const { checkedAtMs, result } = this.cachedConnection as NonNullable<typeof this.cachedConnection>;
@@ -172,6 +192,7 @@ export class SetupService {
       subdomain,
       ok: result.ok,
       message: result.message,
+      isTemporaryFailure: result.isTemporaryFailure === true,
       checkedAt: new Date(checkedAtMs).toISOString(),
     };
   }
@@ -193,28 +214,38 @@ export class SetupService {
       });
       return { ok: true, message: 'Connected to BambooHR.' };
     } catch (error) {
-      return { ok: false, message: this.describeConnectionError(error) };
+      return this.describeConnectionError(error);
     }
   }
 
-  private describeConnectionError(error: unknown): string {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      if (status === 401) return 'BambooHR rejected the API key. Check it was copied in full.';
-      if (status === 403) {
-        return 'This API key does not have access to Hiring (applicant tracking). Ask a BambooHR admin to give its user that permission.';
-      }
-      if (status === 404 || (status !== undefined && status >= 300 && status < 400)) {
-        return 'BambooHR did not recognise that subdomain. Use just the part before .bamboohr.com.';
-      }
-      if (status === 429) return 'BambooHR is rate limiting requests. Wait a minute and try again.';
-      if (status !== undefined) return `BambooHR returned an unexpected response (HTTP ${status}).`;
-      if (error.code === 'ENOTFOUND') {
-        return 'Could not find that BambooHR address. Check the subdomain, and that this computer is online.';
-      }
-      return 'Could not reach BambooHR. Check this computer is online and try again.';
+  private describeConnectionError(error: unknown): ConnectionTestResult {
+    if (!axios.isAxiosError(error)) return { ok: false, message: 'Could not test the connection.' };
+
+    const status = error.response?.status;
+    const kind = classifyBambooHRFailure(status, error.code);
+    console.error('BambooHR connection test failed:', { status, code: error.code, kind });
+
+    // Outages and network trouble say nothing about the key, so the key is kept.
+    if (kind === 'unavailable' || kind === 'rate_limited' || kind === 'timeout' || kind === 'network') {
+      return { ok: false, message: buildBambooHRError(kind, status, error).message, isTemporaryFailure: true };
     }
-    return 'Could not test the connection.';
+    if (kind === 'unauthorized') {
+      return { ok: false, message: 'BambooHR rejected the API key. Check it was copied in full.' };
+    }
+    if (kind === 'forbidden') {
+      return {
+        ok: false,
+        message:
+          'This API key does not have access to Hiring (applicant tracking). Ask a BambooHR admin to give its user that permission.',
+      };
+    }
+    if (status === 404 || (status !== undefined && status >= 300 && status < 400)) {
+      return {
+        ok: false,
+        message: 'BambooHR did not recognise that subdomain. Use just the part before .bamboohr.com.',
+      };
+    }
+    return { ok: false, message: buildBambooHRError(kind, status, error).message };
   }
 
   /** Persist credentials to the root .env and apply them immediately. */

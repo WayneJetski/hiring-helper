@@ -10,6 +10,9 @@
  * available" rather than an error.
  */
 
+import { buildBambooHRError, classifyBambooHRFailure } from '../errors/bamboohr-failure.js';
+import { UpstreamServiceError } from '../errors/upstream-error.js';
+
 /** Injectable fetch signature (so tests can supply a fake). */
 export type FetchFn = (
   url: string,
@@ -92,7 +95,8 @@ export async function fetchPostingText(
     });
     if (response.status === 404) return null;
     if (!response.ok) {
-      throw new Error(`BambooHR careers site returned HTTP ${response.status}`);
+      console.error(`BambooHR careers site returned HTTP ${response.status} for job ${jobId}`);
+      throw buildBambooHRError(classifyBambooHRFailure(response.status, undefined), response.status, undefined);
     }
     const body = (await response.json()) as {
       result?: { jobOpening?: { description?: unknown } };
@@ -101,6 +105,12 @@ export async function fetchPostingText(
     if (typeof description !== 'string') return null;
     const text = htmlToPlainText(description);
     return text === '' ? null : text;
+  } catch (error) {
+    if (error instanceof UpstreamServiceError) throw error;
+    // fetch() rejects with an AbortError on our timeout and a TypeError when it cannot connect.
+    console.error(`Could not fetch the posting for job ${jobId}:`, error);
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    throw buildBambooHRError(isTimeout ? 'timeout' : 'network', undefined, error);
   } finally {
     clearTimeout(timer);
   }

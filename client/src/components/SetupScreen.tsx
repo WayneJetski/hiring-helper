@@ -72,6 +72,8 @@ export function SetupScreen({
   const [connection, setConnection] = useState<BambooHRConnection | null>(null);
   const [connectionError, setConnectionError] = useState<string>('');
   const [isChangingKey, setIsChangingKey] = useState<boolean>(false);
+  // Bumped by "Check again" to re-run the saved-connection check.
+  const [connectionCheckCount, setConnectionCheckCount] = useState<number>(0);
 
   useEffect(() => {
     if (!isConfigured) return;
@@ -89,12 +91,20 @@ export function SetupScreen({
     return () => {
       isStale = true;
     };
-  }, [isConfigured]);
+  }, [isConfigured, connectionCheckCount]);
+
+  const handleCheckAgain = (): void => {
+    setConnection(null);
+    setConnectionError('');
+    setConnectionCheckCount((count) => count + 1);
+  };
 
   const isChecking = isConfigured && connection === null && connectionError === '';
   const isWorking = connection?.ok === true;
-  // Hide the form while a working key is saved, until the user asks to change it.
-  const isFormVisible = !isConfigured || isChangingKey || !isWorking;
+  // BambooHR being down or unreachable says nothing about the saved key.
+  const isTemporaryFailure = connection?.isTemporaryFailure === true;
+  // Hide the form while a key is saved and not known to be bad, until the user asks to change it.
+  const isFormVisible = !isConfigured || isChangingKey || (!isWorking && !isTemporaryFailure);
   const showConnectionCard = isConfigured;
 
   const run = useCallback(
@@ -138,7 +148,9 @@ export function SetupScreen({
 
       {showConnectionCard && (
         <div
-          className={`setup-connection ${isChecking ? 'checking' : isWorking ? 'ok' : 'problem'}`}
+          className={`setup-connection ${
+            isChecking ? 'checking' : isWorking ? 'ok' : isTemporaryFailure ? 'warning' : 'problem'
+          }`}
           role="status"
         >
           {isChecking ? (
@@ -155,6 +167,23 @@ export function SetupScreen({
                 Your saved API key works.
                 {connection?.checkedAt && ` Checked ${formatTimeAgo(new Date(connection.checkedAt))}.`}
               </p>
+              {!isChangingKey && (
+                <button type="button" className="setup-secondary" onClick={() => setIsChangingKey(true)}>
+                  Modify connection
+                </button>
+              )}
+            </>
+          ) : isTemporaryFailure ? (
+            <>
+              <p className="setup-connection-line">
+                <Icon name="alertTriangle" /> Could not check your BambooHR connection right now.
+              </p>
+              <p className="setup-hint">
+                {connection?.message} Your saved API key has not been changed or removed.
+              </p>
+              <button type="button" className="setup-secondary" onClick={handleCheckAgain}>
+                Check again
+              </button>
               {!isChangingKey && (
                 <button type="button" className="setup-secondary" onClick={() => setIsChangingKey(true)}>
                   Modify connection
@@ -246,11 +275,11 @@ export function SetupScreen({
           <button type="submit" className="setup-primary" disabled={!canSubmit}>
             Save and connect
           </button>
-          {(isWorking || onCancel) && (
+          {(isWorking || isTemporaryFailure || onCancel) && (
             <button
               type="button"
               className="setup-link"
-              onClick={() => (isWorking ? setIsChangingKey(false) : onCancel?.())}
+              onClick={() => (isWorking || isTemporaryFailure ? setIsChangingKey(false) : onCancel?.())}
             >
               Cancel
             </button>

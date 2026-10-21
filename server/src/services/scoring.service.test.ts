@@ -126,7 +126,8 @@ test('a result error is surfaced', () => {
   const status = service.getStatus();
   assert.equal(status.running, false);
   assert.equal(status.ok, false);
-  assert.equal(status.error, 'boom');
+  assert.match(status.error ?? '', /Claude Code reported a problem/);
+  assert.doesNotMatch(status.error ?? '', /boom/);
 });
 
 test('a not-signed-in result tells the user to sign in from Setup', () => {
@@ -166,7 +167,7 @@ test('a run that fails with a login problem points the user to sign in', () => {
   service.start({ jobId: 45 });
   child.stderr.emit('data', Buffer.from('Invalid API key. Please run /login'));
   child.emit('close', 1);
-  assert.match(service.getStatus().error ?? '', /not be signed in.*Sign in to Claude/);
+  assert.match(service.getStatus().error ?? '', /not signed in.*Sign in to Claude/);
 });
 
 test('reports the total it set out to score so the UI can show progress', () => {
@@ -276,7 +277,8 @@ test('an error in one batch stops the remaining batches', () => {
   const status = service.getStatus();
   assert.equal(status.running, false);
   assert.equal(status.ok, false);
-  assert.equal(status.error, 'boom');
+  assert.match(status.error ?? '', /Claude Code reported a problem/);
+  assert.doesNotMatch(status.error ?? '', /boom/);
 });
 
 test('cancelling mid-run does not start the remaining batches', () => {
