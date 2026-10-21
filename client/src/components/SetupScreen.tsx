@@ -181,14 +181,16 @@ export function SetupScreen({
               <p className="setup-hint">
                 {connection?.message} Your saved API key has not been changed or removed.
               </p>
-              <button type="button" className="setup-secondary" onClick={handleCheckAgain}>
-                Check again
-              </button>
-              {!isChangingKey && (
-                <button type="button" className="setup-secondary" onClick={() => setIsChangingKey(true)}>
-                  Modify connection
+              <div className="setup-connection-actions">
+                <button type="button" className="setup-secondary" onClick={handleCheckAgain}>
+                  Check again
                 </button>
-              )}
+                {!isChangingKey && (
+                  <button type="button" className="setup-secondary" onClick={() => setIsChangingKey(true)}>
+                    Modify connection
+                  </button>
+                )}
+              </div>
             </>
           ) : (
             <>

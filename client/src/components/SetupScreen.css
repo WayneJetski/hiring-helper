@@ -203,6 +203,18 @@
   margin-top: 0.75rem;
 }
 
+/* Buttons side by side; the row carries the top margin so they do not touch. */
+.setup-connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.setup-connection-actions .setup-secondary {
+  margin-top: 0;
+}
+
 /* Label with a helper link on the right */
 .setup-label-row {
   display: flex;
