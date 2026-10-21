@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -32,7 +32,7 @@ test('a scoring run keeps only the Skill built-in and loads only the project MCP
   const args = scoringSandboxArguments('/repo');
   assert.equal(args[args.indexOf('--tools') + 1], 'Skill');
   assert.ok(args.includes('--strict-mcp-config'));
-  assert.equal(args[args.indexOf('--mcp-config') + 1], '/repo/.mcp.json');
+  assert.equal(args[args.indexOf('--mcp-config') + 1], join('/repo', '.mcp.json'));
   // Variadic, so it must come last or it would swallow the flags after it.
   assert.equal(args.indexOf('--allowedTools') < args.length - 1, true);
   assert.equal(args.slice(args.indexOf('--allowedTools') + 1).some((arg) => arg.startsWith('--')), false);

@@ -12,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -54,7 +54,8 @@ function transitiveImportsOf(entryFile: string): Set<string> {
 }
 
 function describe(files: Iterable<string>): string[] {
-  return [...files].map((file) => relative(SRC_DIR, file)).sort();
+  // Forward slashes on every platform, so expectations read the same on Windows.
+  return [...files].map((file) => relative(SRC_DIR, file).split(sep).join('/')).sort();
 }
 
 test('the MCP server cannot reach the BambooHR status writer or the push service', () => {
@@ -65,7 +66,7 @@ test('the MCP server cannot reach the BambooHR status writer or the push service
   assert.equal(reachable.has(PUSH_MODULE), false, 'MCP must not import the push service');
 
   const controllersAndRoutes = [...reachable].filter((file) =>
-    /\/(controllers|routes)\//.test(file)
+    /[\\/](controllers|routes)[\\/]/.test(file)
   );
   assert.deepEqual(describe(controllersAndRoutes), [], 'MCP must not import REST controllers');
 });
