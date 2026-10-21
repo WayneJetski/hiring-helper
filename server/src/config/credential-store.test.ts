@@ -3,12 +3,16 @@ import assert from 'node:assert/strict';
 import {
   accountFor,
   forgetApiKey,
+  KeychainCredentialStore,
+  type KeychainEntryFactory,
   resolveApiKey,
   storeApiKey,
   type CredentialStore,
 } from './credential-store.js';
 
-function memoryStore(initial: Record<string, string> = {}): CredentialStore & { items: Map<string, string> } {
+function memoryStore(
+  initial: Record<string, string> = {}
+): CredentialStore & { items: Map<string, string> } {
   const items = new Map(Object.entries(initial));
   return {
     items,
@@ -33,7 +37,11 @@ const brokenStore: CredentialStore = {
 test('an older install with the key in .env moves it into the store and flags the file for cleaning', () => {
   const store = memoryStore();
   const result = resolveApiKey(store, 'acme', 'old-plaintext-key');
-  assert.deepEqual(result, { apiKey: 'old-plaintext-key', location: 'keychain', shouldScrubEnvFile: true });
+  assert.deepEqual(result, {
+    apiKey: 'old-plaintext-key',
+    location: 'keychain',
+    shouldScrubEnvFile: true,
+  });
   assert.equal(store.items.get(accountFor('acme')), 'old-plaintext-key');
 });
 
@@ -89,4 +97,46 @@ test('forgetting a company removes its key and never throws', () => {
   assert.equal(store.items.size, 0);
   assert.doesNotThrow(() => forgetApiKey(brokenStore, 'acme'));
   assert.doesNotThrow(() => forgetApiKey(store, ''));
+});
+
+/** An in-memory stand-in for the OS keychain, keyed by "service/account". */
+function fakeKeychain(initial: Record<string, string> = {}) {
+  const items = new Map(Object.entries(initial));
+  const createEntry: KeychainEntryFactory = (service, account) => {
+    const itemName = `${service}/${account}`;
+    return {
+      getPassword: () => items.get(itemName) ?? null,
+      setPassword: (secret) => void items.set(itemName, secret),
+      deletePassword: () => items.delete(itemName),
+    };
+  };
+  return { items, store: new KeychainCredentialStore(createEntry) };
+}
+
+const NEW_ITEM = 'Hiring Helper BambooHR API key/bamboohr-api-key:acme';
+const OLD_ITEM = 'hiring-helper/bamboohr-api-key:acme';
+
+test('the keychain item is named for what it holds, so the macOS prompt is self-explanatory', () => {
+  const { items, store } = fakeKeychain();
+  store.write(accountFor('acme'), 'k');
+  assert.deepEqual([...items.keys()], [NEW_ITEM]);
+});
+
+test('a key filed under the old service name is found and moved to the new name', () => {
+  const { items, store } = fakeKeychain({ [OLD_ITEM]: 'old-key' });
+  assert.equal(store.read(accountFor('acme')), 'old-key');
+  assert.equal(items.get(NEW_ITEM), 'old-key');
+  assert.equal(items.has(OLD_ITEM), false);
+});
+
+test('the old entry is not touched once the new one exists', () => {
+  const { items, store } = fakeKeychain({ [NEW_ITEM]: 'new-key', [OLD_ITEM]: 'stale' });
+  assert.equal(store.read(accountFor('acme')), 'new-key');
+  assert.equal(items.get(OLD_ITEM), 'stale');
+});
+
+test('removing a company clears both the new and the old entry', () => {
+  const { items, store } = fakeKeychain({ [NEW_ITEM]: 'k', [OLD_ITEM]: 'k' });
+  store.remove(accountFor('acme'));
+  assert.equal(items.size, 0);
 });

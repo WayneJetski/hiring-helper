@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { join } from 'node:path';
 import { buildRestartCommand } from './restart-command.js';
 
 test('on Windows an install path with a space stays in one quoted piece', () => {
@@ -12,7 +13,8 @@ test('on Windows an install path with a space stays in one quoted piece', () => 
 
 test('elsewhere the script is run directly with plain arguments', () => {
   const command = buildRestartCommand('/home/jane/hiring-helper', false, { stopFirst: false });
-  assert.equal(command.file, '/home/jane/hiring-helper/bin/hiring-helper');
+  // join, not a literal: the test also runs on Windows, where the separator is a backslash.
+  assert.equal(command.file, join('/home/jane/hiring-helper', 'bin', 'hiring-helper'));
   assert.deepEqual(command.args, ['restart', '--no-open']);
 });
 
