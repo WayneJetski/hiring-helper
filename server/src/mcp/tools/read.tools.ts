@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpDeps } from '../deps.js';
+import { outOfScopeMessage } from '../application-scope.js';
 import { registerTool } from '../register.js';
 import { jsonResult, textResult, errorResult } from '../result.js';
 
@@ -83,6 +84,7 @@ export function registerReadTools(server: McpServer, deps: McpDeps): void {
       },
     },
     async ({ applicationId }) => {
+      if (!deps.scope.allows(applicationId)) return errorResult(outOfScopeMessage(applicationId));
       try {
         const detail = await deps.applicantQuery.getApplicantDetail(applicationId);
         if (!detail) {
@@ -108,6 +110,7 @@ export function registerReadTools(server: McpServer, deps: McpDeps): void {
       },
     },
     async ({ applicationId }) => {
+      if (!deps.scope.allows(applicationId)) return errorResult(outOfScopeMessage(applicationId));
       try {
         const text = await deps.applicantQuery.getResumeText(applicationId);
         if (text === null) {

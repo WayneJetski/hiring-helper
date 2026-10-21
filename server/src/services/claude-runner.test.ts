@@ -41,7 +41,17 @@ test('sends the prompt to the CLI with the chosen model and returns the reply te
   child.reply({ type: 'result', is_error: false, result: '{"ok":true}' });
 
   assert.equal(await pending, '{"ok":true}');
-  assert.deepEqual(captured.args, ['-p', 'Hello there', '--model', 'test-model', '--output-format', 'json']);
+  assert.deepEqual(captured.args, [
+    '-p',
+    'Hello there',
+    '--model',
+    'test-model',
+    '--output-format',
+    'json',
+    '--tools',
+    '',
+    '--strict-mcp-config',
+  ]);
   assert.notEqual(captured.cwd, process.cwd(), 'runs outside the project so its instructions are not loaded');
 });
 

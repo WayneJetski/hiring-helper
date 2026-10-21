@@ -2,6 +2,7 @@
  * Repository for managing application records in the database
  */
 
+import { buildOrderByClause } from './sort-order.js';
 import { getDatabase } from '../db/database.js';
 import type Database from 'better-sqlite3';
 
@@ -343,19 +344,7 @@ export class ApplicationsRepository {
 
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    // Build ORDER BY clause with support for confidence (from application_scores table) and status
-    const validSortColumns: Record<string, string> = {
-      'applied_date': 'a.applied_date',
-      'appliedDate': 'a.applied_date',
-      'stage': 'st.status',
-      'rating': 'a.rating',
-      'name': 'ap.last_name, ap.first_name',
-      'email': 'ap.email',
-      'confidence': 'COALESCE(sc.score, -1)', // Sort by score, put NULL at end
-    };
-
-    const sortColumn = validSortColumns[sortBy] || 'a.applied_date';
-    const orderByClause = `ORDER BY ${sortColumn} ${sortDirection.toUpperCase()}`;
+    const orderByClause = buildOrderByClause(sortBy, sortDirection);
 
     // Build pagination clause
     let paginationClause = '';

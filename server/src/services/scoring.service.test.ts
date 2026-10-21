@@ -54,7 +54,10 @@ test('spawns claude with a tight allowlist and job-scoped prompt', () => {
   assert.ok(args.includes('--output-format') && args.includes('stream-json'));
   assert.ok(args.includes('--verbose'));
   assert.ok(args.includes('--allowedTools'));
-  assert.ok(args.includes('Skill') && args.includes('mcp__hiring-helper__*'));
+  assert.ok(args.includes('Skill') && args.includes('mcp__hiring-helper__save_evaluation'));
+  assert.ok(!args.includes('mcp__hiring-helper__*'), 'no wildcard: each tool is named');
+  assert.ok(args.includes('--strict-mcp-config'), 'only the hiring-helper server is loaded');
+  assert.equal(args[args.indexOf('--tools') + 1], 'Skill', 'the built-in tools are removed, not just unapproved');
   // A model is pinned (default Sonnet 5) rather than inheriting the caller's.
   const modelIdx = args.indexOf('--model');
   assert.ok(modelIdx !== -1 && typeof args[modelIdx + 1] === 'string' && args[modelIdx + 1].length > 0);
@@ -77,7 +80,8 @@ test('re-score mode names the explicit IDs and overwrites, via the skill rubric'
   assert.match(prompt, /get_system_prompt/);
   // Still the same tight sandbox.
   const args = captured.args ?? [];
-  assert.ok(args.includes('Skill') && args.includes('mcp__hiring-helper__*'));
+  assert.ok(args.includes('Skill') && args.includes('mcp__hiring-helper__save_evaluation'));
+  assert.ok(args.includes('--strict-mcp-config'));
 });
 
 test('counts save_evaluation calls as progress and finishes on the result event', () => {

@@ -34,7 +34,12 @@ export async function initializeDatabase(): Promise<Database.Database> {
   try {
     // Ensure data directory exists
     const dataDir = dirname(DB_PATH);
-    await fs.mkdir(dataDir, { recursive: true });
+    // Applicant PII lives under here (database, backups, résumé and summary caches):
+    // keep it readable by this user only. Windows ignores the mode bits.
+    await fs.mkdir(dataDir, { recursive: true, mode: 0o700 });
+    // Best effort: a data folder owned by someone else cannot be changed, and that
+    // must not stop the app from starting.
+    await fs.chmod(dataDir, 0o700).catch(() => undefined);
 
     // Create or open database
     dbInstance = new Database(DB_PATH);

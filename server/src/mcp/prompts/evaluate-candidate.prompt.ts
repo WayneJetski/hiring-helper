@@ -11,6 +11,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
 import type { McpDeps } from '../deps.js';
+import { outOfScopeMessage } from '../application-scope.js';
 import { registerPrompt } from '../register.js';
 
 /** Substitute the job placeholders into a rubric template. */
@@ -41,6 +42,8 @@ export function registerEvaluateCandidatePrompt(server: McpServer, deps: McpDeps
       if (Number.isNaN(applicationId)) {
         return userMessage(`Invalid applicationId: "${applicationIdStr}".`);
       }
+
+      if (!deps.scope.allows(applicationId)) return userMessage(outOfScopeMessage(applicationId));
 
       const ctx = await deps.applicantQuery.getScoringContext(applicationId);
       if (!ctx) {

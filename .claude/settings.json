@@ -1,3 +1,15 @@
 {
-  "enabledMcpjsonServers": ["hiring-helper"]
+  "enabledMcpjsonServers": [
+    "hiring-helper"
+  ],
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Edit(./.env)",
+      "Write(./.env)",
+      "Bash(curl *applicants/push*)",
+      "Bash(curl *update/apply*)",
+      "Bash(curl *setup/bamboohr*)"
+    ]
+  }
 }

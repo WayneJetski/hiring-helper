@@ -18,6 +18,7 @@ import { BambooHRSyncService } from '../services/bamboohr-sync.service.js';
 import { JobDescriptionService } from '../services/job-description.service.js';
 import { ApplicationStatesRepository } from '../repositories/application-states.repository.js';
 import { createMcpServer } from './server.js';
+import { scopeFromEnvironment } from './application-scope.js';
 
 async function main(): Promise<void> {
   await initializeDatabase();
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
     sync: new BambooHRSyncService(),
     jobDescriptions: new JobDescriptionService(),
     states: new ApplicationStatesRepository(),
+    scope: scopeFromEnvironment(),
   });
 
   const transport = new StdioServerTransport();

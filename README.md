@@ -207,7 +207,7 @@ Query parameters:
 ### POST /api/applicants/push
 Push local status changes (stage moves and rejections) back to BambooHR.
 
-Body: `{ jobId?, ids? }` — omit `ids` to push every pending change in scope.
+Body: `{ jobId?, changes: [{ id, toStatusId }] }` — required, and must be exactly the changes you reviewed in the preview; a row edited since is skipped (`changedSinceReview`) and anything else pending is left alone. The request must come from the web page (the browser's `Origin`), so it is refused from `curl`.
 
 Only the status is written to BambooHR; **candidates are never emailed**. Changes made locally are held until you push them, and a sync will not overwrite an un-pushed local change.
 
@@ -238,8 +238,8 @@ The application uses SQLite for local data storage. See [DATABASE.md](./DATABASE
 
 ## Security
 
-- API keys are stored in the `.env` file next to the app (never commit it)
-- Backend acts as a secure proxy to BambooHR API
+- API keys are stored in the `.env` file next to the app (owner-only; never commit it)
+- Backend acts as a proxy to the BambooHR API. The AI that reads résumés has no way to change anything in BambooHR; see [SECURITY.md](./SECURITY.md) for how that is enforced and what to do on your side (start with a least-privilege API key)
 - There is no login: the app listens only on `127.0.0.1` (your own computer), refuses requests addressed to any other host name, and refuses changes sent from other websites. Do not expose it to a network without adding authentication first.
 
 ## License

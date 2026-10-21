@@ -18,7 +18,7 @@ import setupRoutes from './routes/setup.routes.js';
 import updateRoutes from './routes/update.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
-import { localOnlyGuard } from './middleware/local-only.middleware.js';
+import { allowedOriginsFor, createLocalOnlyGuard } from './middleware/local-only.middleware.js';
 import { initializeDatabase, closeDatabase } from './db/database.js';
 import { BambooHRSyncService } from './services/bamboohr-sync.service.js';
 import { registerClientAssets } from './utils/client-assets.js';
@@ -33,15 +33,20 @@ const app = express();
 app.use(helmet());
 
 // Only this computer's own browser and tools may use the API (see the middleware for why).
-app.use(localOnlyGuard);
+const isProduction = config.server.nodeEnv === 'production';
+app.use(createLocalOnlyGuard(allowedOriginsFor(config.server.port, config.client.url, isProduction)));
 
 // CORS configuration
-app.use(
-  cors({
-    origin: config.client.url,
-    credentials: true,
-  })
-);
+// An installed copy serves its page from this server (same origin), so it needs no CORS
+// at all. Only the Vite dev client, on another port, is let in during development.
+if (!isProduction) {
+  app.use(
+    cors({
+      origin: config.client.url,
+      credentials: true,
+    })
+  );
+}
 
 // Rate limiting - Apply only to expensive operations, not to read endpoints
 // This ensures the app remains accessible even during heavy background processing
@@ -54,8 +59,8 @@ const expensiveOpLimiter = rateLimit({
 });
 
 // Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// The API speaks JSON only; accepting HTML form posts would only widen the cross-site surface.
+app.use(express.json({ limit: '1mb' }));
 
 // Request logging
 app.use(requestLogger);

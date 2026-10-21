@@ -306,6 +306,8 @@ export interface PushResult {
   pushed: number;
   failed: number;
   rateLimited: boolean;
+  /** Reviewed changes not sent because the applicant was edited after the preview. */
+  changedSinceReview: number;
   results: PushItemResult[];
 }
 

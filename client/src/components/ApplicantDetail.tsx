@@ -16,6 +16,7 @@ import { RatingStars } from './icons/RatingStars';
 import type { Status } from '../types/applicant.types';
 import { getNeighbors, loadNavigationIds } from '../utils/applicantNavigation';
 import { buildCandidateLink } from '../utils/bamboohrLinks';
+import { toSafeWebUrl } from '../utils/safeUrl';
 import { saveSelectedJobId } from '../utils/filterStorage';
 import {
   FLAG_DISPLAY,
@@ -144,6 +145,9 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
 
   // Null until BambooHR is connected and synced, in which case the button is not shown.
   const bambooHRLink = buildCandidateLink(bambooHRSubdomain, applicant.id);
+  // Applicant-supplied text: only plain web addresses become links (see safeUrl.ts).
+  const linkedInHref = toSafeWebUrl(applicant.linkedInUrl);
+  const websiteHref = toSafeWebUrl(applicant.websiteUrl);
 
   return (
     <div className="applicant-detail">
@@ -347,15 +351,15 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
               </div>
             </section>
 
-            {(applicant.linkedInUrl || applicant.websiteUrl) && (
+            {(linkedInHref || websiteHref) && (
               <section className="detail-section">
                 <h2>Online Presence</h2>
                 <div className="info-grid">
-                  {applicant.linkedInUrl && (
+                  {linkedInHref && (
                     <div className="info-item">
                       <span className="info-label">LinkedIn:</span>
                       <a
-                        href={applicant.linkedInUrl}
+                        href={linkedInHref ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="info-value link"
@@ -364,11 +368,11 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
                       </a>
                     </div>
                   )}
-                  {applicant.websiteUrl && (
+                  {websiteHref && (
                     <div className="info-item">
                       <span className="info-label">Website:</span>
                       <a
-                        href={applicant.websiteUrl}
+                        href={websiteHref ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="info-value link"

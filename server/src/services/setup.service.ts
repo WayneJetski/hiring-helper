@@ -17,6 +17,7 @@ import {
   isBambooHRConfigured,
   setBambooHRCredentials,
 } from '../config/env.config.js';
+import { writePrivateFile } from '../utils/private-file.js';
 import { upsertEnvLines } from '../utils/env-file.js';
 import { ClaudeAuthService } from './claude-auth.service.js';
 
@@ -228,7 +229,7 @@ export class SetupService {
       BAMBOOHR_API_KEY: apiKey,
       BAMBOOHR_SUBDOMAIN: subdomain,
     });
-    await fs.writeFile(ENV_FILE_PATH, updated, { encoding: 'utf-8', mode: 0o600 });
+    await writePrivateFile(ENV_FILE_PATH, updated);
     setBambooHRCredentials(apiKey, subdomain);
     this.invalidateConnectionCache();
   }

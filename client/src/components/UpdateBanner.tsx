@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiService } from '../services/api.service';
 import type { UpdateStatus } from '../types/applicant.types';
 import { interpretUpdatePoll } from '../utils/updateProgress';
+import { toSafeWebUrl } from '../utils/safeUrl';
 import { Icon } from './icons/Icon';
 import './UpdateBanner.css';
 
@@ -117,6 +118,7 @@ export function UpdateBanner(): JSX.Element | null {
   };
 
   const hasUpdate = status?.isManagedInstall === true && status.update.available;
+  const compareHref = toSafeWebUrl(status?.update.compareUrl);
   if (!hasUpdate && phase === 'idle') return null;
 
   return (
@@ -127,8 +129,8 @@ export function UpdateBanner(): JSX.Element | null {
             <span className="update-banner-text">
               <Icon name="upload" /> A new version of Hiring Helper is available.
             </span>
-            {status?.update.compareUrl && (
-              <a href={status.update.compareUrl} target="_blank" rel="noopener noreferrer" className="update-banner-link">
+            {compareHref && (
+              <a href={compareHref} target="_blank" rel="noopener noreferrer" className="update-banner-link">
                 See what&apos;s new
               </a>
             )}

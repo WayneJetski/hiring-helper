@@ -9,6 +9,7 @@ import type { EvaluationService } from '../services/evaluation.service.js';
 import type { BambooHRSyncService } from '../services/bamboohr-sync.service.js';
 import type { JobDescriptionService } from '../services/job-description.service.js';
 import type { ApplicationStatesRepository } from '../repositories/application-states.repository.js';
+import type { ApplicationScope } from './application-scope.js';
 
 export interface McpDeps {
   applicantQuery: ApplicantQueryService;
@@ -16,4 +17,6 @@ export interface McpDeps {
   sync: BambooHRSyncService;
   jobDescriptions: JobDescriptionService;
   states: ApplicationStatesRepository;
+  /** Which applications this session may read or save (see application-scope.ts). */
+  scope: ApplicationScope;
 }

@@ -11,7 +11,10 @@
  */
 
 /** Injectable fetch signature (so tests can supply a fake). */
-export type FetchFn = (url: string, init?: { signal?: AbortSignal }) => Promise<{
+export type FetchFn = (
+  url: string,
+  init?: { signal?: AbortSignal; redirect?: 'error' }
+) => Promise<{
   ok: boolean;
   status: number;
   json: () => Promise<unknown>;
@@ -82,8 +85,10 @@ export async function fetchPostingText(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    // No redirects: the address is fixed, so a redirect would only ever lead elsewhere.
     const response = await fetchFn(`https://${subdomain}.bamboohr.com/careers/${jobId}/detail`, {
       signal: controller.signal,
+      redirect: 'error',
     });
     if (response.status === 404) return null;
     if (!response.ok) {

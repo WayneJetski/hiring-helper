@@ -8,7 +8,13 @@ import express from 'express';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { hostnameOf, isLocalHostHeader, isLocalOrigin, localOnlyGuard } from './local-only.middleware.js';
+import {
+  allowedOriginsFor,
+  createLocalOnlyGuard,
+  hostnameOf,
+  isLocalHostHeader,
+  requireBrowserOrigin,
+} from './local-only.middleware.js';
 
 test('reads the host name out of Host headers and origins', () => {
   assert.equal(hostnameOf('localhost:3000'), 'localhost');
@@ -28,21 +34,51 @@ test('only local host names are accepted', () => {
   assert.equal(isLocalHostHeader(undefined), false);
 });
 
-test('local origins are accepted on any port; look-alikes are not', () => {
-  assert.equal(isLocalOrigin('http://localhost:5173'), true);
-  assert.equal(isLocalOrigin('http://127.0.0.1:28417'), true);
-  assert.equal(isLocalOrigin('https://evil.example.com'), false);
-  assert.equal(isLocalOrigin('http://localhost.evil.com'), false);
-  assert.equal(isLocalOrigin('null'), false);
+test('only this server and the dev client are allowed to make changes', () => {
+  const origins = allowedOriginsFor(28417, 'http://localhost:5173');
+  for (const origin of [
+    'http://localhost:28417',
+    'http://127.0.0.1:28417',
+    'http://[::1]:28417',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ]) {
+    assert.equal(origins.has(origin), true, origin);
+  }
+  for (const origin of [
+    'http://localhost:8080', // some other program on this computer
+    'http://localhost',
+    'https://localhost:28417',
+    'https://evil.example.com',
+    'http://localhost.evil.com:28417',
+    'null',
+  ]) {
+    assert.equal(origins.has(origin), false, origin);
+  }
+});
+
+test('in production the dev client port is not trusted', () => {
+  const origins = allowedOriginsFor(28417, 'http://localhost:5173', true);
+  assert.equal(origins.has('http://localhost:28417'), true);
+  assert.equal(origins.has('http://localhost:5173'), false);
+});
+
+test('an unusable CLIENT_URL leaves only the server port allowed', () => {
+  const origins = allowedOriginsFor(3000, 'not a url');
+  assert.equal(origins.has('http://localhost:3000'), true);
+  assert.equal(origins.has('http://localhost:5173'), false);
 });
 
 let server: http.Server;
 let port: number;
+/** The port the guard treats as "this server" (the test listens on a random one). */
+const SERVER_PORT = 28417;
 
 before(async () => {
   const app = express();
-  app.use(localOnlyGuard);
+  app.use(createLocalOnlyGuard(allowedOriginsFor(SERVER_PORT, 'http://localhost:5173')));
   app.all('/thing', (_req, res) => res.json({ ok: true }));
+  app.post('/sensitive', requireBrowserOrigin, (_req, res) => res.json({ ok: true }));
   await new Promise<void>((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -53,9 +89,13 @@ after(() => {
   server.close();
 });
 
-function request(method: string, headers: Record<string, string>): Promise<number> {
+function request(
+  method: string,
+  headers: Record<string, string>,
+  path = '/thing'
+): Promise<number> {
   return new Promise((resolve, reject) => {
-    const req = http.request({ host: '127.0.0.1', port, path: '/thing', method, headers }, (res) => {
+    const req = http.request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
       res.resume();
       resolve(res.statusCode ?? 0);
     });
@@ -78,5 +118,28 @@ test('a write from another website is refused, but reading is not tied to Origin
   assert.equal(await request('POST', { Host: local, Origin: 'https://evil.example.com' }), 403);
   assert.equal(await request('DELETE', { Host: local, Origin: 'null' }), 403);
   assert.equal(await request('POST', { Host: local, Origin: 'http://localhost:5173' }), 200, 'the dev server');
+  assert.equal(await request('POST', { Host: local, Origin: `http://localhost:${SERVER_PORT}` }), 200, 'the app itself');
+  assert.equal(
+    await request('POST', { Host: local, Origin: 'http://localhost:8080' }),
+    403,
+    'another program on localhost'
+  );
   assert.equal(await request('GET', { Host: local, Origin: 'https://evil.example.com' }), 200);
+});
+
+test('a sensitive action needs a browser-labelled request from the page', async () => {
+  const local = `localhost:${port}`;
+  const page = `http://localhost:${SERVER_PORT}`;
+  assert.equal(await request('POST', { Host: local }, '/sensitive'), 403, 'curl or a script');
+  assert.equal(
+    await request('POST', { Host: local, Origin: page, 'Sec-Fetch-Site': 'same-site' }, '/sensitive'),
+    403,
+    'a different page on this computer'
+  );
+  assert.equal(
+    await request('POST', { Host: local, Origin: page, 'Sec-Fetch-Site': 'cross-site' }, '/sensitive'),
+    403
+  );
+  assert.equal(await request('POST', { Host: local, Origin: page, 'Sec-Fetch-Site': 'same-origin' }, '/sensitive'), 200);
+  assert.equal(await request('POST', { Host: local, Origin: page }, '/sensitive'), 200, 'older browsers');
 });
