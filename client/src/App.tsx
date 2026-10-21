@@ -58,6 +58,20 @@ function AppContent(): JSX.Element {
         ? 'candidate'
         : null;
 
+  // Scroll to the top first so the overlay measures the page as it is laid out at the
+  // top, and its highlights and legend start from the same place every time. Hovering a
+  // legend item scrolls the page around, so closing puts the reader back where they were.
+  const scrollBeforeHelpRef = useRef<number>(0);
+  const openHelp = (): void => {
+    scrollBeforeHelpRef.current = window.scrollY;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    setIsHelpOpen(true);
+  };
+  const closeHelp = (): void => {
+    setIsHelpOpen(false);
+    window.scrollTo({ top: scrollBeforeHelpRef.current, left: 0, behavior: 'instant' });
+  };
+
   // Leaving the page (or its help) closes the overlay.
   useEffect(() => {
     setIsHelpOpen(false);
@@ -167,7 +181,7 @@ function AppContent(): JSX.Element {
               <ConnectionBadge subdomain={setupStatus?.bambooHR.subdomain ?? ''} />
             )}
             {helpPageKey && (
-              <button type="button" className="nav-help" onClick={() => setIsHelpOpen(true)}>
+              <button type="button" className="nav-help" onClick={openHelp}>
                 <Icon name="helpCircle" /> Help
               </button>
             )}
@@ -180,7 +194,7 @@ function AppContent(): JSX.Element {
       <main className="main-content">{renderBody()}</main>
 
       {isHelpOpen && helpPageKey && (
-        <HelpOverlay pageKey={helpPageKey} onClose={() => setIsHelpOpen(false)} />
+        <HelpOverlay pageKey={helpPageKey} onClose={closeHelp} />
       )}
     </div>
   );

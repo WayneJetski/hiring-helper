@@ -1,11 +1,11 @@
 /**
  * HelpOverlay
  *
- * Dims the page, rings the main buttons and columns with numbered badges, and
- * explains each number in one legend card (so nothing covers the controls it
- * describes). Elements opt in with a `data-help="<id>"` attribute; ids that are
- * not on screen right now (for example "Send to BambooHR" when nothing is
- * waiting) are left out of both the page and the legend.
+ * Dims the page and lists what each control does in one legend card. Hovering (or
+ * focusing) a legend item scrolls its element into view and spotlights it with a ring;
+ * with nothing hovered the page is just dimmed, so the overlay is not overwhelming.
+ * Elements opt in with a `data-help="<id>"` attribute; ids that are not on the page
+ * right now (for example "Send to BambooHR" when nothing is waiting) are left out.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -13,10 +13,13 @@ import { useDialogBehavior } from '../hooks/useDialogBehavior';
 import {
   estimateLegendHeight,
   legendColumnCount,
+  legendRowCount,
   legendWidth,
   placeLegend,
+  REVEAL_EDGE_MARGIN,
+  REVEAL_TOP,
+  scrollDeltaToReveal,
   type Box,
-  type LegendLayout,
 } from '../utils/helpOverlayLayout';
 import { Icon } from './icons/Icon';
 import './HelpOverlay.css';
@@ -63,53 +66,67 @@ interface HelpOverlayProps {
   onClose: () => void;
 }
 
-interface Highlight extends HelpStep {
+interface LegendItem extends HelpStep {
   number: number;
-  rect: Box;
 }
 
 interface Measurement {
   viewport: { width: number; height: number };
-  highlights: Highlight[];
+  items: LegendItem[];
   legend: Box;
   legendColumns: number;
 }
 
-/** The applicant page has few items, so they read best as one column down the right side. */
-const LEGEND_LAYOUT: Record<HelpPageKey, LegendLayout> = { list: 'bottom', candidate: 'side' };
+function findHelpElement(id: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-help="${id}"]`);
+}
 
+function toBox(rect: DOMRect): Box {
+  return { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+}
+
+function sameBox(a: Box | null, b: Box | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.top === b.top && a.left === b.left && a.width === b.width && a.height === b.height;
+}
+
+/**
+ * Lists the steps whose element is on the page (even below the fold: hovering scrolls to
+ * it) and places the legend where it hides the least of what is on screen right now. The
+ * legend then stays put, so the item under the mouse never moves while the page scrolls.
+ */
 function measure(pageKey: HelpPageKey): Measurement {
   const viewport = { width: window.innerWidth, height: window.innerHeight };
-  const highlights: Highlight[] = [];
+  const items: LegendItem[] = [];
+  const visibleRects: Box[] = [];
 
   for (const step of HELP_STEPS[pageKey]) {
-    const element = document.querySelector<HTMLElement>(`[data-help="${step.id}"]`);
+    const element = findHelpElement(step.id);
     if (!element) continue;
     const rect = element.getBoundingClientRect();
-    const isVisible =
-      rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < viewport.height;
-    if (!isVisible) continue;
-    highlights.push({
-      ...step,
-      number: highlights.length + 1,
-      rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
-    });
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    items.push({ ...step, number: items.length + 1 });
+    if (rect.bottom > 0 && rect.top < viewport.height) visibleRects.push(toBox(rect));
   }
 
-  const layout = LEGEND_LAYOUT[pageKey];
-  const legendColumns = legendColumnCount(viewport.width, layout);
+  const legendColumns = legendColumnCount(viewport.width);
   const legendContentHeight = estimateLegendHeight(
-    highlights.map((highlight) => highlight.text),
+    items.map((item) => item.text),
     legendColumns,
-    legendWidth(viewport.width, layout)
+    legendWidth(viewport.width)
   );
-  const legend = placeLegend(
-    highlights.map((highlight) => highlight.rect),
-    viewport,
-    legendContentHeight,
-    layout
-  );
-  return { viewport, highlights, legend, legendColumns };
+  const legend = placeLegend(visibleRects, viewport, legendContentHeight);
+  return { viewport, items, legend, legendColumns };
+}
+
+/**
+ * The part of the screen the legend leaves free, in which a hovered element is revealed:
+ * the card takes a band at the bottom (or the top), and the free area is the rest.
+ */
+function freeAreaAround(legend: Box, viewportHeight: number): { top: number; bottom: number } {
+  const free = { top: REVEAL_TOP, bottom: viewportHeight - REVEAL_EDGE_MARGIN };
+  if (legend.top > viewportHeight / 2) return { ...free, bottom: legend.top - REVEAL_EDGE_MARGIN };
+  return { ...free, top: legend.top + legend.height + REVEAL_EDGE_MARGIN };
 }
 
 export function HelpOverlay({ pageKey, onClose }: HelpOverlayProps): JSX.Element {
@@ -119,14 +136,47 @@ export function HelpOverlay({ pageKey, onClose }: HelpOverlayProps): JSX.Element
   const [measurement, setMeasurement] = useState<Measurement>(() => measure(pageKey));
   const remeasure = useCallback(() => setMeasurement(measure(pageKey)), [pageKey]);
 
-  // Page scroll is locked while open (see useDialogBehavior); only a resize moves things.
+  // Page scroll is locked for the user while open (see useDialogBehavior); only a resize
+  // re-measures, and hovering scrolls the page itself.
   useLayoutEffect(remeasure, [remeasure]);
   useEffect(() => {
     window.addEventListener('resize', remeasure);
     return () => window.removeEventListener('resize', remeasure);
   }, [remeasure]);
 
-  const { viewport, highlights, legend, legendColumns } = measurement;
+  const { viewport, items, legend, legendColumns } = measurement;
+
+  // The legend item under the mouse (or focused), and where its element is on screen.
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeRect, setActiveRect] = useState<Box | null>(null);
+
+  // Scroll the active element into view, then follow it while the smooth scroll runs.
+  useEffect(() => {
+    if (activeId === null) {
+      setActiveRect(null);
+      return;
+    }
+    const element = findHelpElement(activeId);
+    if (!element) {
+      setActiveRect(null);
+      return;
+    }
+
+    const delta = scrollDeltaToReveal(
+      element.getBoundingClientRect(),
+      freeAreaAround(legend, viewport.height)
+    );
+    if (delta !== 0) window.scrollBy({ top: delta, behavior: 'smooth' });
+
+    let frame = 0;
+    const follow = (): void => {
+      const next = toBox(element.getBoundingClientRect());
+      setActiveRect((previous) => (sameBox(previous, next) ? previous : next));
+      frame = requestAnimationFrame(follow);
+    };
+    follow();
+    return () => cancelAnimationFrame(frame);
+  }, [activeId, legend, viewport.height]);
 
   return (
     <div
@@ -141,17 +191,16 @@ export function HelpOverlay({ pageKey, onClose }: HelpOverlayProps): JSX.Element
         <defs>
           <mask id="help-overlay-mask">
             <rect width={viewport.width} height={viewport.height} fill="white" />
-            {highlights.map((highlight) => (
+            {activeRect && (
               <rect
-                key={highlight.id}
-                x={highlight.rect.left - SPOTLIGHT_PADDING}
-                y={highlight.rect.top - SPOTLIGHT_PADDING}
-                width={highlight.rect.width + SPOTLIGHT_PADDING * 2}
-                height={highlight.rect.height + SPOTLIGHT_PADDING * 2}
+                x={activeRect.left - SPOTLIGHT_PADDING}
+                y={activeRect.top - SPOTLIGHT_PADDING}
+                width={activeRect.width + SPOTLIGHT_PADDING * 2}
+                height={activeRect.height + SPOTLIGHT_PADDING * 2}
                 rx={8}
                 fill="black"
               />
-            ))}
+            )}
           </mask>
         </defs>
         <rect
@@ -162,20 +211,17 @@ export function HelpOverlay({ pageKey, onClose }: HelpOverlayProps): JSX.Element
         />
       </svg>
 
-      {highlights.map((highlight) => (
+      {activeRect && (
         <span
-          key={highlight.id}
           className="help-overlay-ring"
           style={{
-            top: highlight.rect.top - SPOTLIGHT_PADDING,
-            left: highlight.rect.left - SPOTLIGHT_PADDING,
-            width: highlight.rect.width + SPOTLIGHT_PADDING * 2,
-            height: highlight.rect.height + SPOTLIGHT_PADDING * 2,
+            top: activeRect.top - SPOTLIGHT_PADDING,
+            left: activeRect.left - SPOTLIGHT_PADDING,
+            width: activeRect.width + SPOTLIGHT_PADDING * 2,
+            height: activeRect.height + SPOTLIGHT_PADDING * 2,
           }}
-        >
-          <span className="help-overlay-number">{highlight.number}</span>
-        </span>
-      ))}
+        />
+      )}
 
       <div
         className="help-overlay-legend"
@@ -184,14 +230,26 @@ export function HelpOverlay({ pageKey, onClose }: HelpOverlayProps): JSX.Element
       >
         <ol
           className="help-overlay-legend-list"
-          style={{ gridTemplateColumns: `repeat(${legendColumns}, minmax(0, 1fr))` }}
+          style={{
+            gridTemplateColumns: `repeat(${legendColumns}, minmax(0, 1fr))`,
+            // Fill down each column before starting the next (1-4, 5-8, 9-11).
+            gridTemplateRows: `repeat(${legendRowCount(items.length, legendColumns)}, auto)`,
+          }}
+          onMouseLeave={() => setActiveId(null)}
         >
-          {highlights.map((highlight) => (
-            <li key={highlight.id}>
-              <span className="help-overlay-number inline">{highlight.number}</span>
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className={item.id === activeId ? 'is-active' : undefined}
+              tabIndex={0}
+              onMouseEnter={() => setActiveId(item.id)}
+              onFocus={() => setActiveId(item.id)}
+              onBlur={() => setActiveId(null)}
+            >
+              <span className="help-overlay-number inline">{item.number}</span>
               <span>
-                <strong>{highlight.title}</strong>
-                <span className="help-overlay-legend-text">{highlight.text}</span>
+                <strong>{item.title}</strong>
+                <span className="help-overlay-legend-text">{item.text}</span>
               </span>
             </li>
           ))}

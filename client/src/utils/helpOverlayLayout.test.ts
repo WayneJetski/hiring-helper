@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   estimateLegendHeight,
   legendColumnCount,
+  legendRowCount,
   legendWidth,
   placeLegend,
+  scrollDeltaToReveal,
   type Box,
 } from './helpOverlayLayout.js';
 
@@ -62,22 +64,41 @@ test('more rows need a taller card, and more columns need fewer rows', () => {
   assert.ok(estimateLegendHeight(texts, 3, width) > estimateLegendHeight(texts.slice(0, 3), 3, width));
 });
 
-test('the side layout is one narrow column down the right edge, below the top bar', () => {
-  assert.equal(legendColumnCount(1400, 'side'), 1);
-  const legend = placeLegend([{ top: 100, left: 100, width: 200, height: 40 }], viewport, 300, 'side');
-  assert.equal(legend.width, 340);
-  assert.equal(legend.left + legend.width, viewport.width - 16);
-  assert.equal(legend.top, 72);
+test('items fill each column before the next: 11 items in 3 columns is 4, 4, 3 rows deep', () => {
+  assert.equal(legendRowCount(11, 3), 4);
+  assert.equal(legendRowCount(12, 3), 4);
+  assert.equal(legendRowCount(2, 3), 1);
+  assert.equal(legendRowCount(0, 3), 1);
 });
 
-test('the side layout is capped to the screen height when the list is tall', () => {
-  const legend = placeLegend([], viewport, 5000, 'side');
-  assert.ok(legend.top + legend.height <= viewport.height);
+test('the height estimate follows column order, so one long note only counts in its own row', () => {
+  const short = 'Short note.';
+  const long = 'A much longer note that wraps onto several lines in a narrow column. '.repeat(3);
+  const width = legendWidth(viewport.width);
+  // 6 items, 3 columns: rows are (0,2,4) and (1,3,5). The long note is item 1, in row 2 only.
+  const texts = [short, long, short, short, short, short];
+  const withLongInSecondRow = estimateLegendHeight(texts, 3, width);
+  const allShort = estimateLegendHeight(Array(6).fill(short), 3, width);
+  assert.ok(withLongInSecondRow > allShort);
 });
 
-test('the side layout moves to the left edge when the right edge would cover a highlight', () => {
-  const rightColumnCard: Box = { top: 300, left: 700, width: 640, height: 400 };
-  const legend = placeLegend([rightColumnCard], viewport, 300, 'side');
-  assert.equal(overlaps(legend, rightColumnCard), false);
-  assert.equal(legend.left, 16);
+test('an element already inside the free area needs no scroll', () => {
+  assert.equal(scrollDeltaToReveal({ top: 200, height: 100 }, { top: 72, bottom: 600 }), 0);
+});
+
+test('an element below the free area is scrolled up to its middle', () => {
+  // Free area 72..600 (height 528); a 100px element is centred at top = 72 + 214 = 286.
+  assert.equal(scrollDeltaToReveal({ top: 900, height: 100 }, { top: 72, bottom: 600 }), 614);
+});
+
+test('an element above the free area is scrolled down (negative delta)', () => {
+  assert.equal(scrollDeltaToReveal({ top: -300, height: 100 }, { top: 72, bottom: 600 }), -586);
+});
+
+test('an element partly under the legend counts as not revealed', () => {
+  assert.notEqual(scrollDeltaToReveal({ top: 550, height: 100 }, { top: 72, bottom: 600 }), 0);
+});
+
+test('an element taller than the free area is aligned to its top', () => {
+  assert.equal(scrollDeltaToReveal({ top: 800, height: 900 }, { top: 72, bottom: 600 }), 728);
 });

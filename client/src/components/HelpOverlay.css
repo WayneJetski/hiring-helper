@@ -45,8 +45,10 @@
   display: flex;
   flex-direction: column;
   padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--hh-table-header-border);
   border-radius: 10px;
-  background: var(--hh-surface);
+  /* Darker than the page surface so the card stands out against the dimmed screen. */
+  background: var(--hh-table-header);
   color: var(--hh-ink);
   box-shadow: var(--hh-shadow-md);
   cursor: default;
@@ -54,9 +56,13 @@
 
 .help-overlay-legend-list {
   display: grid;
+  grid-auto-flow: column;
   gap: 0.75rem 1.25rem;
-  margin: 0;
-  padding: 0;
+  /* Room for the hover highlight, which is drawn outside each item; the negative margin
+     cancels the padding so the card's size does not change. */
+  margin: -0.3rem -0.5rem;
+  padding: 0.3rem 0.5rem;
+  overflow-x: hidden;
   overflow-y: auto;
   list-style: none;
   font-size: 0.88rem;
@@ -67,6 +73,21 @@
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* The item whose element is spotlighted on the page. A shadow, not padding or margin, so
+   it adds nothing to the item's size and cannot make the list scroll. */
+.help-overlay-legend-list li:hover,
+.help-overlay-legend-list li.is-active {
+  background: var(--hh-surface);
+  box-shadow: 0 0 0 0.3rem var(--hh-surface);
+}
+
+.help-overlay-legend-list li:focus-visible {
+  outline: 3px solid var(--hh-primary);
+  outline-offset: 0.3rem;
 }
 
 .help-overlay-legend-text {
@@ -74,16 +95,18 @@
   color: var(--hh-muted);
 }
 
+/* Floats over the card's top edge, so it takes no vertical space of its own. */
 .help-overlay-close {
-  align-self: flex-end;
-  flex: none;
-  margin-top: 0.8rem;
-  padding: 0.5rem 1rem;
+  position: absolute;
+  top: -16px;
+  right: 16px;
+  padding: 0.4rem 0.9rem;
   border: none;
   border-radius: 999px;
   background: var(--hh-accent);
   color: var(--hh-primary);
   font-weight: 600;
+  box-shadow: var(--hh-shadow-md);
   cursor: pointer;
 }
 
