@@ -6,7 +6,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { AxiosError, AxiosHeaders } from 'axios';
+import { UpstreamServiceError } from '../errors/upstream-error.js';
 import {
+  raiseBambooHRError,
   assertRedirectAllowed,
   assertRequestAllowed,
   BambooHRAccessDeniedError,
@@ -73,5 +76,33 @@ test('a redirect is followed only within https://*.bamboohr.com', () => {
   assert.throws(
     () => assertRedirectAllowed('https:', 'acme.bamboohr.com.evil.example'),
     BambooHRAccessDeniedError
+  );
+});
+
+test('a gateway 503 page becomes a friendly error and never reaches the message', () => {
+  const gatewayPage =
+    '<html><head><title>503 Service Temporarily Unavailable</title></head><body>openresty APISIX</body></html>';
+  const axiosFailure = new AxiosError(
+    'Request failed with status code 503',
+    'ERR_BAD_RESPONSE',
+    undefined,
+    undefined,
+    {
+      status: 503,
+      statusText: 'Service Unavailable',
+      data: gatewayPage,
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    }
+  );
+
+  assert.throws(
+    () => raiseBambooHRError(axiosFailure, 'Failed to fetch applications'),
+    (error: unknown) => {
+      assert.ok(error instanceof UpstreamServiceError);
+      assert.equal(error.kind, 'unavailable');
+      assert.doesNotMatch(error.message, /<|openresty|APISIX|Failed to fetch/);
+      return true;
+    }
   );
 });

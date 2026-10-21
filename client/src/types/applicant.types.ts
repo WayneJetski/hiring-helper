@@ -253,6 +253,8 @@ export interface BambooHRConnection {
   subdomain: string | null;
   ok: boolean | null; // null when nothing is saved to test
   message: string;
+  /** The check failed for a reason unrelated to the key (outage, rate limit, offline): keep the key. */
+  isTemporaryFailure: boolean;
   checkedAt: string | null; // when BambooHR was actually asked (ISO)
 }
 

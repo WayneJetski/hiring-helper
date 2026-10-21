@@ -6,6 +6,7 @@
  */
 
 import type { Request, Response } from 'express';
+import { respondWithError } from '../errors/respond-with-error.js';
 import { ApplicantQueryService, DataIntegrityError } from '../services/applicant-query.service.js';
 import { ApplicationStatesRepository } from '../repositories/application-states.repository.js';
 import { BulkActionService } from '../services/bulk-action.service.js';
@@ -147,10 +148,7 @@ export class ApplicantsController {
       });
     } catch (error) {
       console.error('Failed to get applicants:', error);
-      res.status(500).json({
-        error: 'Failed to fetch applicants',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch applicants');
     }
   }
 
@@ -178,10 +176,7 @@ export class ApplicantsController {
         return;
       }
       console.error('Failed to get applicant:', error);
-      res.status(500).json({
-        error: 'Failed to fetch applicant',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch applicant');
     }
   }
 
@@ -205,10 +200,7 @@ export class ApplicantsController {
       res.json({ data: { applicationId, text } });
     } catch (error) {
       console.error('Failed to get resume:', error);
-      res.status(500).json({
-        error: 'Failed to fetch resume',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch resume');
     }
   }
 
@@ -233,10 +225,7 @@ export class ApplicantsController {
       res.json(statuses);
     } catch (error) {
       console.error('Failed to get statuses:', error);
-      res.status(500).json({
-        error: 'Failed to fetch statuses',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch statuses');
     }
   }
 
@@ -260,10 +249,7 @@ export class ApplicantsController {
       res.send(Buffer.from(buffer));
     } catch (error) {
       console.error('Failed to fetch résumé file:', error);
-      res.status(500).json({
-        error: 'Failed to fetch résumé file',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch résumé file');
     }
   }
 
@@ -294,10 +280,7 @@ export class ApplicantsController {
       res.json({ ok: true, applicationId, ...result });
     } catch (error) {
       console.error('Failed to move applicant stage:', error);
-      res.status(500).json({
-        error: 'Failed to move applicant stage',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to move applicant stage');
     }
   }
 
@@ -318,10 +301,7 @@ export class ApplicantsController {
       res.json(bulkActionService.preview(parsed.jobId, parsed.condition));
     } catch (error) {
       console.error('Failed to preview bulk action:', error);
-      res.status(500).json({
-        error: 'Failed to preview bulk action',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to preview bulk action');
     }
   }
 
@@ -407,10 +387,7 @@ export class ApplicantsController {
       res.json(bulkActionService.restore(entries as Array<{ id: number; statusId: number }>));
     } catch (error) {
       console.error('Failed to restore statuses:', error);
-      res.status(500).json({
-        error: 'Failed to restore statuses',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to restore statuses');
     }
   }
 
@@ -431,10 +408,7 @@ export class ApplicantsController {
       res.json(bulkActionService.previewDuplicates(jobId));
     } catch (error) {
       console.error('Failed to preview duplicates:', error);
-      res.status(500).json({
-        error: 'Failed to preview duplicates',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to preview duplicates');
     }
   }
 
@@ -455,10 +429,7 @@ export class ApplicantsController {
       res.json(bulkActionService.cleanupDuplicates(jobId));
     } catch (error) {
       console.error('Failed to clean up duplicates:', error);
-      res.status(500).json({
-        error: 'Failed to clean up duplicates',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to clean up duplicates');
     }
   }
 
@@ -481,10 +452,7 @@ export class ApplicantsController {
       res.json(bambooPushService.previewPush(jobId));
     } catch (error) {
       console.error('Failed to preview push:', error);
-      res.status(500).json({
-        error: 'Failed to preview push',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to preview push');
     }
   }
 
@@ -510,10 +478,7 @@ export class ApplicantsController {
       res.json(bambooPushService.discardPending(jobId, ids));
     } catch (error) {
       console.error('Failed to discard pending changes:', error);
-      res.status(500).json({
-        error: 'Failed to discard pending changes',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to discard pending changes');
     }
   }
 
@@ -537,10 +502,7 @@ export class ApplicantsController {
       res.json(result);
     } catch (error) {
       console.error('Failed to push to BambooHR:', error);
-      res.status(500).json({
-        error: 'Failed to push to BambooHR',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to push to BambooHR');
     }
   }
 }

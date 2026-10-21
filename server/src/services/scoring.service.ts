@@ -17,7 +17,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { claudeChildEnvironment, scoringSandboxArguments } from './claude-sandbox.js';
 import { JobsRepository } from '../repositories/jobs.repository.js';
-import { NOT_SIGNED_IN_MESSAGE, isNotSignedInText } from './claude-auth.service.js';
+import { classifyClaudeFailureText, describeClaudeFailure } from '../errors/claude-failure.js';
 import { SCORING_MODEL } from '../scoring/claude-model.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -239,10 +239,13 @@ export class ScoringService {
         const loginHint = LOGIN_PROBLEM_PATTERN.test(stderrTail)
           ? ' Claude Code may not be signed in: open Setup and choose Sign in to Claude.'
           : '';
+        // The CLI's stderr can hold raw API errors; it goes to the log, not the screen.
+        const isRecognised = stderrTail !== '' && classifyClaudeFailureText(stderrTail) !== 'unknown';
         this.fail(
-          `Scoring run exited (code ${code ?? 'null'}) without completing.` +
-            (stderrTail ? ` Details: ${stderrTail.trim().slice(-500)}` : '') +
-            loginHint
+          isRecognised
+            ? describeClaudeFailure(stderrTail, 'scoring run')
+            : `Scoring run exited (code ${code ?? 'null'}) without completing. Check the server log for details.` +
+                loginHint
         );
       }
     });
@@ -283,9 +286,9 @@ export class ScoringService {
       const resultText = typeof obj.result === 'string' ? obj.result : null;
       if (isError) {
         this.status.error =
-          resultText !== null && isNotSignedInText(resultText)
-            ? NOT_SIGNED_IN_MESSAGE
-            : (resultText ?? 'Scoring run reported an error.');
+          resultText !== null
+            ? describeClaudeFailure(resultText, 'scoring result')
+            : 'Scoring run reported an error.';
         this.status.ok = false;
         this.pendingBatches = [];
       } else if (this.pendingBatches.length > 0) {
@@ -326,6 +329,7 @@ export class ScoringService {
     if (message.includes('ENOENT')) {
       return 'Claude Code CLI (`claude`) not found on PATH. Install it and log in on the server host (see SETUP.md, section 3).';
     }
-    return `Failed to start scoring run: ${message}`;
+    console.error('Could not start the scoring run:', message);
+    return 'Could not start Claude Code. Check the server log for details.';
   }
 }

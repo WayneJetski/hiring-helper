@@ -4,6 +4,7 @@
  */
 
 import type { Request, Response } from 'express';
+import { respondWithError } from '../errors/respond-with-error.js';
 import { BambooHRSyncService } from '../services/bamboohr-sync.service.js';
 
 const syncService = new BambooHRSyncService();
@@ -53,11 +54,7 @@ export class SyncController {
       });
     } catch (error) {
       console.error('Sync failed:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Sync failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Sync failed');
     }
   }
 
@@ -79,10 +76,7 @@ export class SyncController {
       });
     } catch (error) {
       console.error('Failed to get sync history:', error);
-      res.status(500).json({
-        error: 'Failed to fetch sync history',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch sync history');
     }
   }
 
@@ -115,10 +109,7 @@ export class SyncController {
       });
     } catch (error) {
       console.error('Failed to get sync status:', error);
-      res.status(500).json({
-        error: 'Failed to fetch sync status',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
+      respondWithError(res, error, 'Failed to fetch sync status');
     }
   }
 }

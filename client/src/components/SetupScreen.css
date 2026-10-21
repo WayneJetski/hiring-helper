@@ -176,6 +176,12 @@
   color: #7a1c1c;
 }
 
+.setup-connection.warning {
+  border-color: #e0b252;
+  background: #fff6e0;
+  color: #6b4a00;
+}
+
 .setup-connection.checking {
   background: var(--hh-surface-alt);
   color: var(--hh-muted);

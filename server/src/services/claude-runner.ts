@@ -15,6 +15,7 @@ import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from 'node:c
 import { NOT_SIGNED_IN_MESSAGE, isNotSignedInText } from './claude-auth.service.js';
 import { tmpdir } from 'node:os';
 import { TEXT_ONLY_SANDBOX_ARGUMENTS, claudeChildEnvironment } from './claude-sandbox.js';
+import { describeClaudeFailure } from '../errors/claude-failure.js';
 import { SCORING_MODEL } from '../scoring/claude-model.js';
 
 /** Injectable spawn signature (so tests can supply a fake child process). */
@@ -114,6 +115,7 @@ export class ClaudeRunner {
             const hint = LOGIN_PROBLEM_PATTERN.test(stderrTail)
               ? ' Claude Code may not be signed in: open Setup and choose Sign in to Claude.'
               : '';
+            console.error(`Claude Code exited with code ${code ?? 'null'}:`, stderrTail.slice(-2000));
             reject(new ClaudeRunError(`Claude Code stopped unexpectedly (code ${code ?? 'null'}).${hint}`));
             return;
           }
@@ -124,7 +126,7 @@ export class ClaudeRunner {
                 typeof reply.result === 'string' && reply.result !== ''
                   ? reply.result
                   : 'Claude Code reported an error.';
-              reject(new ClaudeRunError(isNotSignedInText(reason) ? NOT_SIGNED_IN_MESSAGE : reason));
+              reject(new ClaudeRunError(describeClaudeFailure(reason, 'claude -p reply')));
               return;
             }
             resolve(reply.result);
@@ -136,10 +138,15 @@ export class ClaudeRunner {
     });
   }
 
+  private logAndSummariseSpawnFailure(message: string): string {
+    console.error('Could not start Claude Code:', message);
+    return 'Could not start Claude Code. Check the server log for details.';
+  }
+
   private describeSpawnError(error: unknown): string {
     const message = error instanceof Error ? error.message : String(error);
     return message.includes('ENOENT')
       ? 'Claude Code was not found on this computer. Install it and sign in (see the Setup page).'
-      : `Could not start Claude Code: ${message}`;
+      : this.logAndSummariseSpawnFailure(message);
   }
 }

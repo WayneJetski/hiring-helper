@@ -55,11 +55,11 @@ test('sends the prompt to the CLI with the chosen model and returns the reply te
   assert.notEqual(captured.cwd, process.cwd(), 'runs outside the project so its instructions are not loaded');
 });
 
-test('an error reported by Claude Code is surfaced as written', async () => {
+test('an error reported by Claude Code is reworded for the user', async () => {
   const { runner, child } = setup();
   const pending = runner.run('x');
   child.reply({ is_error: true, result: 'Credit balance is too low' });
-  await assert.rejects(pending, (error: Error) => error instanceof ClaudeRunError && /Credit balance/.test(error.message));
+  await assert.rejects(pending, (error: Error) => error instanceof ClaudeRunError && /billing/.test(error.message) && !/Credit balance is too low/.test(error.message));
 });
 
 test('a non-zero exit explains how to sign in when the output looks like a login problem', async () => {

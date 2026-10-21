@@ -169,3 +169,23 @@ test(
     assert.equal(calls.length, 0);
   })
 );
+
+test(
+  'an outage is flagged as temporary, not as a bad key, and is not cached',
+  withSavedCredentials('good-key', 'acme', async () => {
+    let calls = 0;
+    const tester: ConnectionTester = async () => {
+      calls += 1;
+      return { ok: false, message: 'BambooHR is having trouble right now.', isTemporaryFailure: true };
+    };
+    const service = new SetupService(async () => null, tester, () => 1_000);
+
+    const first = await service.checkSavedConnection();
+    await service.checkSavedConnection();
+
+    assert.equal(first.ok, false);
+    assert.equal(first.isTemporaryFailure, true);
+    assert.equal(calls, 2, 'asked again straight away, so "Check again" can recover');
+    assert.equal(config.bambooHR.apiKey, 'good-key', 'the saved key is untouched');
+  })
+);

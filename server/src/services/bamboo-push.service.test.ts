@@ -10,6 +10,7 @@
  */
 
 import { test } from 'node:test';
+import { buildBambooHRError } from '../errors/bamboohr-failure.js';
 import assert from 'node:assert/strict';
 
 import { BambooPushService } from './bamboo-push.service.js';
@@ -150,7 +151,7 @@ test('never emails candidates: the only BambooHR call is a status update', async
 
 test('a rate limit (429) halts the run and returns partial progress', async () => {
   const client = new FakeBambooHRService();
-  client.failOn(102, new Error('Request failed: 429 Too Many Requests'));
+  client.failOn(102, buildBambooHRError('rate_limited', 429, undefined));
   const { service, repo, updates } = makeService(
     [pending(101, 10), pending(102, 33), pending(103, 15)],
     client

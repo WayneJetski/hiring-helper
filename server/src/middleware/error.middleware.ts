@@ -4,6 +4,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { UpstreamServiceError } from '../errors/upstream-error.js';
 
 export interface HttpError extends Error {
   statusCode?: number;
@@ -19,7 +20,8 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ): void {
-  const statusCode = err.statusCode || err.status || 500;
+  const statusCode =
+    err instanceof UpstreamServiceError ? err.responseStatus : err.statusCode || err.status || 500;
   const message = err.message || 'Internal Server Error';
 
   console.error('Error occurred:', {

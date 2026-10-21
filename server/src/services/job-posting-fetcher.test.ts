@@ -47,9 +47,9 @@ test('a posting without a description yields null', async () => {
   assert.equal(await fetchPostingText('acme', 1, fakeFetch), null);
 });
 
-test('other HTTP failures surface as errors', async () => {
+test('other HTTP failures surface as friendly errors without the response', async () => {
   const fakeFetch: FetchFn = async () => ({ ok: false, status: 500, json: async () => ({}) });
-  await assert.rejects(fetchPostingText('acme', 1, fakeFetch), /HTTP 500/);
+  await assert.rejects(fetchPostingText('acme', 1, fakeFetch), /having trouble/);
 });
 
 test('rejects a subdomain that is not a plain hostname label', async () => {
