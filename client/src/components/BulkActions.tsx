@@ -11,6 +11,7 @@
  * Changes are applied to the local store only (no BambooHR writes, no emails).
  */
 
+import { CLOSED_JOB_CHANGES_REASON } from '../utils/closedJob';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { apiService } from '../services/api.service';
@@ -56,6 +57,8 @@ function defaultOperator(mode: BulkMode, field: ConditionField): ConditionOperat
 
 interface BulkActionsProps {
   selectedJobId?: number;
+  /** A closed job is read-only: bulk reject, move and clean-up are disabled. */
+  isJobClosed?: boolean;
   /** Called after a successful reject/move so the list can refresh. */
   onActionComplete: () => void | Promise<void>;
   /** Bumped whenever data may have changed elsewhere (row actions, sync, scoring). */
@@ -87,6 +90,7 @@ function ApplicantLink({ id, name }: { id: number; name: string }): JSX.Element 
 
 export function BulkActions({
   selectedJobId,
+  isJobClosed = false,
   onActionComplete,
   dataVersion = 0,
 }: BulkActionsProps): JSX.Element {
@@ -451,13 +455,15 @@ export function BulkActions({
           className="bulk-action-button bulk-menu-button"
           data-help="bulk"
           onClick={() => setIsMenuOpen((open) => !open)}
-          disabled={!jobSelected}
+          disabled={!jobSelected || isJobClosed}
           aria-expanded={isMenuOpen}
           aria-haspopup="true"
           title={
-            jobSelected
-              ? 'Reject or move many applicants at once, or clean up duplicates'
-              : 'Select a single job to use bulk actions'
+            isJobClosed
+              ? CLOSED_JOB_CHANGES_REASON
+              : jobSelected
+                ? 'Reject or move many applicants at once, or clean up duplicates'
+                : 'Select a single job to use bulk actions'
           }
         >
           Bulk actions <Icon name="chevronDown" />

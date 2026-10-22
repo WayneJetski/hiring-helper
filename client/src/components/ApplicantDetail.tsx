@@ -17,7 +17,7 @@ import { StatusIcon } from './icons/StatusIcon';
 import { RatingStars } from './icons/RatingStars';
 import type { Status } from '../types/applicant.types';
 import { getNeighbors, loadNavigationIds } from '../utils/applicantNavigation';
-import { CLOSED_JOB_SCORING_REASON } from '../utils/scoreApplicantOutcome';
+import { CLOSED_JOB_CHANGES_REASON, CLOSED_JOB_SCORING_REASON } from '../utils/closedJob';
 import { buildCandidateLink } from '../utils/bamboohrLinks';
 import { toSafeWebUrl } from '../utils/safeUrl';
 import {
@@ -94,6 +94,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
             applicantId={applicant.id}
             statuses={statuses}
             hasRejectShortcut
+            disabledReason={applicant.isJobClosed ? CLOSED_JOB_CHANGES_REASON : undefined}
             onMoved={async () => {
               await refetch();
               if (neighbors?.nextId != null) goToApplicant(neighbors.nextId);
@@ -300,6 +301,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
               applicantId={applicant.id}
               statuses={statuses}
               variant="onDark"
+              disabledReason={applicant.isJobClosed ? CLOSED_JOB_CHANGES_REASON : undefined}
               onMoved={() => refetch()}
             />
           </div>

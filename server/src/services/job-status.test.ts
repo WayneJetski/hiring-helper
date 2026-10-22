@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CLOSED_JOB_SCORING_MESSAGE, findJobsToClose, isClosedJobStatus } from './job-status.js';
+import {
+  CLOSED_JOB_CHANGES_MESSAGE,
+  CLOSED_JOB_SCORING_MESSAGE,
+  findJobsToClose,
+  isClosedJobStatus,
+} from './job-status.js';
 
 test('Filled, Canceled and Closed jobs are closed, whatever the capitalisation', () => {
   for (const status of ['Filled', 'canceled', 'Cancelled', ' CLOSED ', 'Archived']) {
@@ -36,4 +41,9 @@ test('a job with no stored status that is still listed stays open', () => {
 
 test('the scoring refusal for a closed job says why', () => {
   assert.match(CLOSED_JOB_SCORING_MESSAGE, /closed/);
+});
+
+test('the refusal for moving or rejecting in a closed job says why', () => {
+  assert.match(CLOSED_JOB_CHANGES_MESSAGE, /closed/);
+  assert.match(CLOSED_JOB_CHANGES_MESSAGE, /moved or rejected/);
 });

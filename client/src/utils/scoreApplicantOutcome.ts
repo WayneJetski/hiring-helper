@@ -5,9 +5,6 @@
 import type { Notice } from '../components/icons/StatusIcon';
 import type { ScoringStatus } from '../types/applicant.types';
 
-/** Why scoring is unavailable for a closed job (the server refuses it too). */
-export const CLOSED_JOB_SCORING_REASON = 'This job is closed, so its applicants can no longer be scored.';
-
 /** Turn a finished scoring run into the message shown to the person. */
 export function describeSingleScoreOutcome(status: ScoringStatus, applicantName: string): Notice {
   if (status.cancelled) {
