@@ -4,13 +4,10 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
-import type { JobSummary } from '../types/applicant.types';
 import { apiService } from '../services/api.service';
 import { groupStatuses } from '../utils/statusGroups';
-import { JobConfig } from './JobConfig';
-import { Modal } from './Modal';
 import { ViewsMenu } from './ViewsMenu';
-import type { ListView, ViewSortColumn } from '../utils/savedViews';
+import type { FlagFilter, ListView, ScoreFilter, ViewSortColumn } from '../utils/savedViews';
 import { Icon } from './icons/Icon';
 import './ApplicantsFilters.css';
 
@@ -20,10 +17,13 @@ interface Status {
 }
 
 interface ApplicantsFiltersProps {
-  jobs: JobSummary[];
-  selectedJobId: number | null; // null = all jobs
-  onJobChange: (jobId: number | null) => void;
   selectedStatuses: number[];
+  scoreFilter: ScoreFilter;
+  flagFilter: FlagFilter;
+  onScoreFilterChange: (value: ScoreFilter) => void;
+  onFlagFilterChange: (value: FlagFilter) => void;
+  /** Resets status, scored and flag filters and the search text. */
+  onClearFilters: () => void;
   onSearchChange: (value: string) => void;
   onStatusesChange: (statusIds: number[]) => void;
   /** Replaces the text in the search box when `token` changes (clear filters, apply a view). */
@@ -33,17 +33,15 @@ interface ApplicantsFiltersProps {
   sortDirection: 'asc' | 'desc';
   searchTerm: string;
   onApplyView: (view: ListView) => void;
-  /** Increment to open the selected job's settings (used by the "set up this job" prompt). */
-  openSettingsRequest: number;
-  /** Called after Job settings saves or confirms something, so setup state can refresh. */
-  onJobSettingsSaved: () => void;
 }
 
 function ApplicantsFiltersComponent({
-  jobs,
-  selectedJobId,
-  onJobChange,
   selectedStatuses,
+  scoreFilter,
+  flagFilter,
+  onScoreFilterChange,
+  onFlagFilterChange,
+  onClearFilters,
   onSearchChange,
   onStatusesChange,
   searchOverride,
@@ -51,23 +49,12 @@ function ApplicantsFiltersComponent({
   sortDirection,
   searchTerm,
   onApplyView,
-  openSettingsRequest,
-  onJobSettingsSaved,
 }: ApplicantsFiltersProps): JSX.Element {
   const [searchInput, setSearchInput] = useState<string>('');
   const [availableStatuses, setAvailableStatuses] = useState<Status[]>([]);
   const [statusesLoading, setStatusesLoading] = useState(true);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
-
-  // Open the settings window when asked (by the "set up this job" prompt).
-  const lastSettingsRequestRef = useRef(openSettingsRequest);
-  useEffect(() => {
-    if (openSettingsRequest !== lastSettingsRequestRef.current) {
-      lastSettingsRequestRef.current = openSettingsRequest;
-      setShowConfig(true);
-    }
-  }, [openSettingsRequest]);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   // Let the list replace the search text (Clear filters, applying a view).
   useEffect(() => {
@@ -192,7 +179,8 @@ function ApplicantsFiltersComponent({
     [selectedStatuses, onStatusesChange]
   );
 
-  const selectedJob = jobs.find((job) => job.id === selectedJobId);
+  const activeFilterCount =
+    (selectedStatuses.length > 0 ? 1 : 0) + (scoreFilter !== 'all' ? 1 : 0) + (flagFilter !== 'all' ? 1 : 0);
 
   const getSelectedStatusLabels = (): string => {
     if (selectedStatuses.length === 0) return 'All Statuses';
@@ -206,38 +194,6 @@ function ApplicantsFiltersComponent({
   return (
     <div className="applicants-filters">
       <div className="filters-row">
-        <select
-          className="job-filter"
-          data-help="job"
-          value={selectedJobId === null ? 'all' : String(selectedJobId)}
-          onChange={(e) => onJobChange(e.target.value === 'all' ? null : Number(e.target.value))}
-          title="Scope the list to a job posting"
-        >
-          <option value="all">All jobs</option>
-          {jobs.map((job) => (
-            <option key={job.id} value={job.id}>
-              {job.title} ({job.activeCount})
-            </option>
-          ))}
-        </select>
-
-        <button
-          className="configure-job-button"
-          data-help="job-settings"
-          onClick={() => setShowConfig((open) => !open)}
-          disabled={selectedJobId === null}
-          title={
-            selectedJobId === null
-              ? 'Select a single job to edit its settings'
-              : 'Edit this job’s posting text and the criteria used to score its applicants'
-          }
-        >
-          <Icon name="settings" /> Job settings
-          {selectedJob && !selectedJob.isReadyToScore && (
-            <span className="setup-needed-pill">Setup needed</span>
-          )}
-        </button>
-
         <input
           type="text"
           placeholder="Search by name or email..."
@@ -247,6 +203,35 @@ function ApplicantsFiltersComponent({
           data-help="search"
         />
 
+        <button
+          type="button"
+          className={`filters-toggle-button${activeFilterCount > 0 ? ' has-active' : ''}`}
+          data-help="filters"
+          onClick={() => setIsFilterPanelOpen((open) => !open)}
+          aria-expanded={isFilterPanelOpen}
+          aria-controls="filters-panel"
+          title={isFilterPanelOpen ? 'Hide filters' : 'Show filters for stage, scored and flags'}
+        >
+          <Icon name="filter" /> Filters
+          {activeFilterCount > 0 && <span className="filters-toggle-count">{activeFilterCount}</span>}
+        </button>
+
+        <ViewsMenu
+          statuses={availableStatuses}
+          current={{
+            statusIds: selectedStatuses,
+            search: searchTerm,
+            scoreFilter,
+            flagFilter,
+            sortColumn,
+            sortDirection,
+          }}
+          onApply={onApplyView}
+        />
+      </div>
+
+      {isFilterPanelOpen && (
+        <div className="filters-panel" id="filters-panel">
         <div className="status-filter-container" ref={dropdownRef}>
           <button
             className="status-filter-button"
@@ -310,21 +295,38 @@ function ApplicantsFiltersComponent({
           )}
         </div>
 
-        <ViewsMenu
-          statuses={availableStatuses}
-          current={{ statusIds: selectedStatuses, search: searchTerm, sortColumn, sortDirection }}
-          onApply={onApplyView}
-        />
-      </div>
-
-      {showConfig && selectedJobId !== null && (
-        <Modal
-          title={`Job settings: ${jobs.find((job) => job.id === selectedJobId)?.title ?? ''}`}
-          size="wide"
-          onClose={() => setShowConfig(false)}
+        <select
+          className="job-filter"
+          data-help="score-filter"
+          value={scoreFilter}
+          onChange={(e) => onScoreFilterChange(e.target.value as ScoreFilter)}
+          aria-label="Filter by scored or unscored"
+          title="Show scored applicants, unscored applicants, or both"
         >
-          <JobConfig key={selectedJobId} jobId={selectedJobId} onSaved={onJobSettingsSaved} />
-        </Modal>
+          <option value="all">Scored and unscored</option>
+          <option value="scored">Scored only</option>
+          <option value="unscored">Unscored only</option>
+        </select>
+
+        <select
+          className="job-filter"
+          data-help="flag-filter"
+          value={flagFilter}
+          onChange={(e) => onFlagFilterChange(e.target.value as FlagFilter)}
+          aria-label="Filter by red flags"
+          title="Show or hide applicants the AI flagged"
+        >
+          <option value="all">Flagged and unflagged</option>
+          <option value="unflagged">Hide flagged</option>
+          <option value="flagged">Flagged only</option>
+        </select>
+
+          {(activeFilterCount > 0 || searchTerm.trim() !== '') && (
+            <button type="button" className="filters-clear-all" onClick={onClearFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -340,20 +342,19 @@ function arePropsEqual(
     prevProps.selectedStatuses.length === nextProps.selectedStatuses.length &&
     prevProps.selectedStatuses.every((id, index) => id === nextProps.selectedStatuses[index]);
 
-  // Job selection or job list changes (titles feed the settings modal)
-  const jobEqual =
-    prevProps.selectedJobId === nextProps.selectedJobId && prevProps.jobs === nextProps.jobs;
+  const aiFiltersEqual =
+    prevProps.scoreFilter === nextProps.scoreFilter &&
+    prevProps.flagFilter === nextProps.flagFilter;
 
   // Sort/search feed the "save view" action; the override token drives the search box
   const viewStateEqual =
     prevProps.sortColumn === nextProps.sortColumn &&
     prevProps.sortDirection === nextProps.sortDirection &&
     prevProps.searchTerm === nextProps.searchTerm &&
-    prevProps.searchOverride.token === nextProps.searchOverride.token &&
-    prevProps.openSettingsRequest === nextProps.openSettingsRequest;
+    prevProps.searchOverride.token === nextProps.searchOverride.token;
 
   // Callbacks should be stable, so we don't need to compare them
-  return statusesEqual && jobEqual && viewStateEqual;
+  return statusesEqual && viewStateEqual && aiFiltersEqual;
 }
 
 export const ApplicantsFilters = memo(ApplicantsFiltersComponent, arePropsEqual);

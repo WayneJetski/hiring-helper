@@ -13,12 +13,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '../services/api.service';
 import type { ScoringStatus } from '../types/applicant.types';
 import { ScoringProgress } from './ScoringProgress';
-import { describeBatchOutcome } from '../utils/scoreApplicantOutcome';
+import { CLOSED_JOB_SCORING_REASON, describeBatchOutcome } from '../utils/scoreApplicantOutcome';
 import { Icon } from './icons/Icon';
 import { StatusIcon } from './icons/StatusIcon';
+import type { FlagFilter, ScoreFilter } from '../utils/savedViews';
 import './ScoringControls.css';
 
 const POLL_INTERVAL_MS = 3000;
+/** How long a success message stays before it clears itself. */
+const SUCCESS_NOTICE_MS = 8000;
 
 interface ScoringControlsProps {
   /** Null when "All jobs" is selected; scoring is job-scoped. */
@@ -26,6 +29,8 @@ interface ScoringControlsProps {
   /** The list's current status filter and search, used to scope a re-score. */
   statusIds: number[];
   searchTerm: string;
+  scoreFilter: ScoreFilter;
+  flagFilter: FlagFilter;
   /** Applicants in this view with no score yet, shown on the button. */
   unscoredCount: number;
   /** Called when a run finishes so the list can refresh. */
@@ -33,22 +38,29 @@ interface ScoringControlsProps {
   /** Setup state of the selected job; scoring is blocked until it is ready. */
   readiness: { hasPosting: boolean; isCriteriaConfirmed: boolean; isReadyToScore: boolean } | null;
   onOpenJobSettings: () => void;
+  /** A closed job cannot be scored; both buttons are disabled and say why. */
+  isJobClosed: boolean;
 }
 
 export function ScoringControls({
   jobId,
   statusIds,
   searchTerm,
+  scoreFilter,
+  flagFilter,
   unscoredCount,
   onScoringComplete,
   readiness,
   onOpenJobSettings,
+  isJobClosed,
 }: ScoringControlsProps): JSX.Element {
   const [isScoring, setIsScoring] = useState<boolean>(false);
   const [scoreStatus, setScoreStatus] = useState<ScoringStatus | null>(null);
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [rescorePreviewCount, setRescorePreviewCount] = useState<number | null>(null);
   const [isRescoreBusy, setIsRescoreBusy] = useState<boolean>(false);
+  // The finishedAt of the run whose message the person closed (or that timed out).
+  const [dismissedFinishedAt, setDismissedFinishedAt] = useState<string | null>(null);
 
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onScoringCompleteRef = useRef(onScoringComplete);
@@ -151,8 +163,10 @@ export function ScoringControls({
       statusIds: statusIds.length > 0 ? statusIds : undefined,
       search: search !== '' ? search : undefined,
       active: true,
+      scored: scoreFilter === 'all' ? undefined : scoreFilter,
+      flagged: flagFilter === 'all' ? undefined : flagFilter,
     };
-  }, [jobId, statusIds, searchTerm]);
+  }, [jobId, statusIds, searchTerm, scoreFilter, flagFilter]);
 
   const handleRescorePreview = useCallback(async (): Promise<void> => {
     const filter = rescoreFilter();
@@ -186,9 +200,21 @@ export function ScoringControls({
   }, [rescoreFilter, startPolling]);
 
   // A job that has not been set up cannot be scored (the server enforces this too).
-  const isBlocked = jobId !== null && readiness !== null && !readiness.isReadyToScore;
+  const isSetupIncomplete = jobId !== null && readiness !== null && !readiness.isReadyToScore;
+  const isBlocked = isJobClosed || isSetupIncomplete;
 
   const finishedNotice = scoreStatus ? describeBatchOutcome(scoreStatus) : null;
+  const finishedAt = scoreStatus?.finishedAt ?? null;
+  const isFinishedNoticeVisible =
+    !isScoring && finishedAt !== null && finishedNotice !== null && finishedAt !== dismissedFinishedAt;
+  const shouldAutoDismiss = isFinishedNoticeVisible && finishedNotice?.tone === 'success';
+
+  // Warnings and errors stay until closed, since they ask the person to act.
+  useEffect(() => {
+    if (!shouldAutoDismiss || finishedAt === null) return;
+    const timer = setTimeout(() => setDismissedFinishedAt(finishedAt), SUCCESS_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [shouldAutoDismiss, finishedAt]);
 
   return (
     <>
@@ -200,7 +226,9 @@ export function ScoringControls({
         title={
           jobId === null
             ? 'Select a job to score its new applicants'
-            : isBlocked
+            : isJobClosed
+              ? CLOSED_JOB_SCORING_REASON
+              : isBlocked
               ? 'Set up this job in Job settings before scoring'
               : 'Score every applicant in this job who has no score yet'
         }
@@ -227,7 +255,9 @@ export function ScoringControls({
         title={
           jobId === null
             ? 'Select a job to re-score applicants'
-            : isBlocked
+            : isJobClosed
+              ? CLOSED_JOB_SCORING_REASON
+              : isBlocked
               ? 'Set up this job in Job settings before scoring'
               : 'Score again everyone currently shown by your filters, replacing their old scores'
         }
@@ -235,7 +265,15 @@ export function ScoringControls({
         <Icon name="repeat" /> Re-score these applicants
       </button>
 
-      {isBlocked && readiness && (
+      {isJobClosed && (
+        <div className="action-panel scoring-setup-needed" role="status">
+          <div>
+            <strong>{CLOSED_JOB_SCORING_REASON}</strong> Existing scores and summaries stay as they are.
+          </div>
+        </div>
+      )}
+
+      {isSetupIncomplete && !isJobClosed && readiness && (
         <div className="action-panel scoring-setup-needed" role="status">
           <div>
             <strong>Set up this job before scoring.</strong>
@@ -304,10 +342,18 @@ export function ScoringControls({
         </div>
       )}
 
-      {!isScoring && scoreStatus?.finishedAt && finishedNotice && (
+      {isFinishedNoticeVisible && finishedNotice && (
         <div className={`action-panel sync-message ${finishedNotice.tone}`}>
           <StatusIcon tone={finishedNotice.tone} />
           <span>{finishedNotice.text}</span>
+          <button
+            type="button"
+            className="scoring-notice-dismiss"
+            onClick={() => setDismissedFinishedAt(finishedAt)}
+            aria-label="Dismiss"
+          >
+            <Icon name="close" />
+          </button>
         </div>
       )}
     </>

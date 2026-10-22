@@ -1,0 +1,59 @@
+/* The job page wraps the applicant list, which already supplies the page width. */
+.job-page > .applicants-list,
+.job-page .applicants-list {
+  padding: 0;
+}
+
+.job-crumbs {
+  margin-bottom: 0.75rem;
+}
+
+.job-crumbs .crumb-current {
+  font-size: 1.05rem;
+}
+
+.job-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--hh-border);
+}
+
+.job-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 3px solid transparent;
+  color: var(--hh-muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.job-tab:hover {
+  color: var(--hh-ink);
+}
+
+.job-tab.active {
+  border-bottom-color: var(--hh-primary);
+  color: var(--hh-primary);
+  font-weight: 600;
+}
+
+.job-tab-count {
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: var(--hh-surface-alt);
+  font-size: 0.8rem;
+  line-height: 1.4rem;
+}
+
+.job-page-back {
+  display: inline-block;
+  margin-top: 1rem;
+  text-decoration: none;
+}
+
+.job-crumb-pill {
+  margin-left: 0.5rem;
+}

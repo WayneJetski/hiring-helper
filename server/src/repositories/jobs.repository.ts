@@ -144,6 +144,21 @@ export class JobsRepository {
   }
 
   /**
+   * Mark jobs closed (the status BambooHR no longer reports for them). Returns how many
+   * rows changed. A later sync that lists the job again restores its real status.
+   */
+  markClosed(jobIds: number[], closedLabel: string): number {
+    if (jobIds.length === 0) return 0;
+    const placeholders = jobIds.map(() => '?').join(', ');
+    const result = this.db
+      .prepare(
+        `UPDATE jobs SET status = ?, updated_at = datetime('now') WHERE id IN (${placeholders})`
+      )
+      .run(closedLabel, ...jobIds);
+    return result.changes;
+  }
+
+  /**
    * Save the job posting text (and optional URL) for a job.
    * Returns false if no job with the given id exists.
    */

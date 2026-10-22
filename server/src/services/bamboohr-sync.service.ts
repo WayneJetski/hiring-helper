@@ -3,6 +3,7 @@
  * Handles synchronization of data from BambooHR API to local SQLite database
  */
 
+import { CLOSED_STATUS_LABEL, findJobsToClose } from './job-status.js';
 import { BambooHRService } from './bamboohr.service.js';
 import { JobsRepository } from '../repositories/jobs.repository.js';
 import { ApplicantsRepository } from '../repositories/applicants.repository.js';
@@ -91,6 +92,13 @@ export class BambooHRSyncService {
         if (updated) enriched++;
       }
       console.info(`✅ Enriched ${enriched} of ${jobs.length} job(s) with posting URL/metadata`);
+
+      // The jobs list is not incremental, so a stored job missing from it has closed.
+      const closedCount = this.jobsRepo.markClosed(
+        findJobsToClose(this.jobsRepo.getAll(), new Set(jobs.map((job) => job.id))),
+        CLOSED_STATUS_LABEL
+      );
+      if (closedCount > 0) console.info(`🔒 Marked ${closedCount} job(s) closed (no longer in BambooHR)`);
       return enriched;
     } catch (error) {
       if (this.isRateLimitError(error)) {

@@ -150,3 +150,17 @@
 .scoring-setup-button:hover {
   background: var(--hh-primary-hover);
 }
+
+.scoring-notice-dismiss {
+  margin-left: auto;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.scoring-notice-dismiss:hover {
+  opacity: 1;
+}

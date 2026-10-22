@@ -452,6 +452,7 @@
   background: none;
   color: var(--hh-primary);
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
 }
 

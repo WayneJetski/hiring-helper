@@ -3,24 +3,29 @@
  * Starts / reports a headless-Claude-Code scoring run. See ScoringService.
  */
 
+import { parseFlagFilter, parseScoreFilter, type FlagFilter, type ScoreFilter } from '../repositories/ai-filters.js';
 import type { Request, Response } from 'express';
 import { scoringService } from '../services/scoring-runtime.js';
 import { ApplicantQueryService } from '../services/applicant-query.service.js';
 import { JobsRepository } from '../repositories/jobs.repository.js';
 import { describeMissingSetup, getJobReadiness } from '../scoring/job-readiness.js';
+import { CLOSED_JOB_SCORING_MESSAGE, isClosedJobStatus } from '../services/job-status.js';
 
 const applicantQueryService = new ApplicantQueryService();
 const jobsRepository = new JobsRepository();
 
 /**
- * Scoring is blocked until the job is set up (posting text present, criteria
- * confirmed). Returns the 409 body to send when it is not, or null when scoring
- * may proceed.
+ * Scoring is blocked for a closed job, and until the job is set up (posting text
+ * present, criteria confirmed). Returns the 409 body to send when it is blocked, or
+ * null when scoring may proceed.
  */
-function blockedBySetup(jobId: number | undefined): { error: string; message: string } | null {
+function blockedFromScoring(jobId: number | undefined): { error: string; message: string } | null {
   if (jobId === undefined) return null;
   const job = jobsRepository.getById(jobId);
   if (!job) return null; // an unknown job is reported by the scoring run itself
+  if (isClosedJobStatus(job.status)) {
+    return { error: 'Job closed', message: CLOSED_JOB_SCORING_MESSAGE };
+  }
   const message = describeMissingSetup(getJobReadiness(job));
   return message ? { error: 'Job not set up', message } : null;
 }
@@ -31,13 +36,24 @@ interface RescoreBody {
   statusIds?: number[];
   search?: string;
   active?: boolean;
+  scored?: string;
+  flagged?: string;
+}
+
+interface RescoreFilter {
+  jobId: number;
+  statusIds?: number[];
+  search?: string;
+  activeOnly: boolean;
+  scoreFilter?: ScoreFilter;
+  flagFilter?: FlagFilter;
 }
 
 /** Validate a re-score filter body → typed filter, or an error string. */
 function parseRescoreBody(
   body: RescoreBody
-): { jobId: number; statusIds?: number[]; search?: string; activeOnly: boolean } | { error: string } {
-  const { jobId, statusIds, search, active } = body ?? {};
+): RescoreFilter | { error: string } {
+  const { jobId, statusIds, search, active, scored, flagged } = body ?? {};
   if (typeof jobId !== 'number' || Number.isNaN(jobId)) {
     return { error: 'jobId is required and must be a number (re-score is job-scoped)' };
   }
@@ -55,6 +71,8 @@ function parseRescoreBody(
     statusIds: statusIds && statusIds.length > 0 ? statusIds : undefined,
     search: search && search.trim() !== '' ? search : undefined,
     activeOnly: active ?? true,
+    scoreFilter: parseScoreFilter(scored),
+    flagFilter: parseFlagFilter(flagged),
   };
 }
 
@@ -74,7 +92,7 @@ export class ScoringController {
         return;
       }
       const scopeJobId = jobId ?? applicantQueryService.resolveCurrentJobId() ?? undefined;
-      const blocked = blockedBySetup(scopeJobId);
+      const blocked = blockedFromScoring(scopeJobId);
       if (blocked) {
         res.status(409).json(blocked);
         return;
@@ -122,7 +140,7 @@ export class ScoringController {
         res.status(404).json({ error: 'Not found', message: 'Applicant not found' });
         return;
       }
-      const blocked = blockedBySetup(target.jobId);
+      const blocked = blockedFromScoring(target.jobId);
       if (blocked) {
         res.status(409).json(blocked);
         return;
@@ -177,7 +195,7 @@ export class ScoringController {
         res.status(400).json({ error: 'Invalid request', message: parsed.error });
         return;
       }
-      const blocked = blockedBySetup(parsed.jobId);
+      const blocked = blockedFromScoring(parsed.jobId);
       if (blocked) {
         res.status(409).json(blocked);
         return;

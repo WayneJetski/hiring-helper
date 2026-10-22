@@ -18,6 +18,8 @@ export interface RowAction {
   isDanger?: boolean;
   /** Opens outside this app (a new tab); shows an external-link icon on the right. */
   isExternal?: boolean;
+  /** When set the action cannot be used; this is shown as the reason on hover. */
+  disabledReason?: string;
 }
 
 interface RowActionsMenuProps {
@@ -55,7 +57,7 @@ export function RowActionsMenu({ applicantName, actionGroups }: RowActionsMenuPr
 
   useEffect(() => {
     if (!isOpen) return;
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not(:disabled)')?.focus();
 
     const handlePointerDown = (event: MouseEvent): void => {
       const target = event.target as Node;
@@ -74,7 +76,7 @@ export function RowActionsMenu({ applicantName, actionGroups }: RowActionsMenuPr
 
   const handleMenuKeyDown = (event: React.KeyboardEvent): void => {
     const items = Array.from(
-      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? []
     );
     const index = items.indexOf(document.activeElement as HTMLElement);
     if (event.key === 'Escape') {
@@ -136,7 +138,8 @@ export function RowActionsMenu({ applicantName, actionGroups }: RowActionsMenuPr
                     type="button"
                     role="menuitem"
                     className={`row-actions-item${action.isDanger ? ' is-danger' : ''}`}
-                    title={action.isExternal ? 'Opens in a new tab' : undefined}
+                    title={action.disabledReason ?? (action.isExternal ? 'Opens in a new tab' : undefined)}
+                    disabled={action.disabledReason !== undefined}
                     onClick={() => {
                       close(false);
                       action.onSelect();

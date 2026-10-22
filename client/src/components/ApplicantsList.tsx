@@ -10,9 +10,9 @@ import { useScoreApplicant } from '../hooks/useScoreApplicant';
 import { apiService } from '../services/api.service';
 import { ApplicantsFilters } from './ApplicantsFilters';
 import { Icon } from './icons/Icon';
-import { type Notice } from './icons/StatusIcon';
 import { BulkActions } from './BulkActions';
-import { SyncStatus } from './SyncStatus';
+import { SyncControls } from './SyncControls';
+import { useBambooHRSync } from '../hooks/useBambooHRSync';
 import { ScoringControls } from './ScoringControls';
 import { StatusIcon } from './icons/StatusIcon';
 import { HelpTip } from './HelpTip';
@@ -21,13 +21,7 @@ import { RowActionModal } from './RowActionModal';
 import { ResumeModal } from './ResumeModal';
 import { StageMover } from './StageMover';
 import { ApplicantsListSkeleton } from './PageSkeletons';
-import {
-  loadSelectedStatusIds,
-  saveSelectedStatusIds,
-  loadSelectedJobId,
-  saveSelectedJobId,
-  hasPersistedJobSelection,
-} from '../utils/filterStorage';
+import { loadSelectedStatusIds, saveSelectedStatusIds } from '../utils/filterStorage';
 import { saveNavigationIds } from '../utils/applicantNavigation';
 import {
   FLAG_DISPLAY,
@@ -35,58 +29,46 @@ import {
   getConfidenceClass,
   getConfidenceLevel,
 } from '../utils/matchDisplay';
+import { CLOSED_JOB_SCORING_REASON } from '../utils/scoreApplicantOutcome';
 import { buildCandidateLink } from '../utils/bamboohrLinks';
-import type { ListView } from '../utils/savedViews';
+import type { FlagFilter, ListView, ScoreFilter } from '../utils/savedViews';
 import type { ApplicantListItem, JobSummary, SetupStatus, Status } from '../types/applicant.types';
 import './ApplicantsList.css';
 
 type SortColumn = 'name' | 'email' | 'stage' | 'confidence' | 'appliedDate';
 type SortDirection = 'asc' | 'desc';
 
-/**
- * Decide which job to scope to on first load.
- *
- * A persisted job selection wins as long as it still refers to a job that
- * exists (guarding against a posting that was removed since it was saved),
- * including the explicit "all jobs" (null) choice. Otherwise fall back to the
- * default behavior: the current (most-recent) job, so old postings' applicants
- * stay hidden.
- */
-function resolveInitialJobId(fetchedJobs: JobSummary[]): number | null {
-  if (hasPersistedJobSelection()) {
-    const persistedJobId = loadSelectedJobId();
-    if (persistedJobId === null) return null; // explicit "all jobs"
-    if (fetchedJobs.some((job) => job.id === persistedJobId)) {
-      return persistedJobId;
-    }
-    // Persisted job no longer exists; fall through to the default.
-  }
-  return fetchedJobs.length > 0 ? fetchedJobs[0].id : null;
-}
-
 interface ApplicantsListProps {
+  /** The job whose applicants are shown. The parent re-mounts this list when the job changes. */
+  job: JobSummary;
+  /** All jobs, used to announce jobs a sync discovers. */
+  jobs: JobSummary[];
+  /** Refreshes job counts and setup state after anything that changes them. */
+  reloadJobs: () => Promise<JobSummary[]>;
   /** The connected BambooHR company address, used to build shareable candidate links. */
   bambooHRSubdomain: string | null;
   /** Whether Claude Code is installed and signed in, since scoring depends on it. */
   claude: SetupStatus['claude'];
 }
 
-export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProps): JSX.Element {
+export function ApplicantsList({
+  job,
+  jobs,
+  reloadJobs,
+  bambooHRSubdomain,
+  claude,
+}: ApplicantsListProps): JSX.Element {
   const [searchTerm, setSearchTerm] = useState<string>('');
-  // Each job remembers its own status selection; it is loaded once the job is
-  // resolved. Stale IDs (statuses that no longer exist) are reconciled inside
-  // ApplicantsFilters once the current status list is known.
-  const [selectedStatusIds, setSelectedStatusIds] = useState<number[]>([]);
+  // Each job remembers its own status selection. Stale IDs (statuses that no longer
+  // exist) are reconciled inside ApplicantsFilters once the current status list is known.
+  const [selectedStatusIds, setSelectedStatusIds] = useState<number[]>(() =>
+    loadSelectedStatusIds(job.id)
+  );
+  const [scoreFilter, setScoreFilter] = useState<ScoreFilter>('all');
+  const [flagFilter, setFlagFilter] = useState<FlagFilter>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<SortColumn>('confidence');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [syncing, setSyncing] = useState<boolean>(false);
-  const [syncNotice, setSyncNotice] = useState<Notice | null>(null);
-
-  // Job scoping: default to the current (most-recent) job so old postings' applicants are hidden.
-  const [jobs, setJobs] = useState<JobSummary[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null); // null = all jobs
-  const [jobsReady, setJobsReady] = useState<boolean>(false);
 
   // Quick actions from each row's "⋮" menu.
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -100,9 +82,6 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
   } | null>(null);
   const [isUndoingRowAction, setIsUndoingRowAction] = useState<boolean>(false);
 
-  // Increment to open the selected job's settings window.
-  const [openSettingsRequest, setOpenSettingsRequest] = useState<number>(0);
-
   // Bumped whenever data may have changed (sync, scoring, bulk actions) so the
   // pending bar and job counts refresh.
   const [dataVersion, setDataVersion] = useState<number>(0);
@@ -112,33 +91,10 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     token: 0,
   });
 
+  // Remember the status selection for this job.
   useEffect(() => {
-    let cancelled = false;
-    apiService
-      .getJobs()
-      .then((fetchedJobs) => {
-        if (cancelled) return;
-        const initialJobId = resolveInitialJobId(fetchedJobs);
-        setJobs(fetchedJobs);
-        setSelectedJobId(initialJobId);
-        setSelectedStatusIds(loadSelectedStatusIds(initialJobId));
-        setJobsReady(true);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error('Failed to load jobs:', err);
-        setJobsReady(true); // Fall back to all-jobs view rather than blocking forever
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Persist the status selection for the current job (not before the job and its
-  // saved selection have been loaded, or the empty default would overwrite it).
-  useEffect(() => {
-    if (jobsReady) saveSelectedStatusIds(selectedJobId, selectedStatusIds);
-  }, [jobsReady, selectedJobId, selectedStatusIds]);
+    saveSelectedStatusIds(job.id, selectedStatusIds);
+  }, [job.id, selectedStatusIds]);
 
   const navigate = useNavigate();
 
@@ -151,12 +107,13 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
   const { applicants, loading, isRefreshing, error, pagination, totalCount, refetch } = useApplicants({
     search: searchTerm,
     statusIds: selectedStatusIds.length > 0 ? selectedStatusIds.join(',') : undefined,
-    jobId: selectedJobId !== null ? String(selectedJobId) : undefined,
+    jobId: String(job.id),
     page: currentPage,
     limit: 50,
     sortBy: sortColumn,
     sortDirection,
-    enabled: jobsReady, // Defer fetching until the default job is resolved
+    scored: scoreFilter === 'all' ? undefined : scoreFilter,
+    flagged: flagFilter === 'all' ? undefined : flagFilter,
   });
 
   // Remember the order shown so the detail page and résumé viewer can step
@@ -164,17 +121,6 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
   useEffect(() => {
     saveNavigationIds(applicants.map((applicant) => applicant.id));
   }, [applicants]);
-
-  const reloadJobs = useCallback(async (): Promise<JobSummary[]> => {
-    try {
-      const fetchedJobs = await apiService.getJobs();
-      setJobs(fetchedJobs);
-      return fetchedJobs;
-    } catch (err) {
-      console.error('Failed to reload jobs:', err);
-      return [];
-    }
-  }, []);
 
   const handleDataChanged = useCallback(async (): Promise<void> => {
     await Promise.all([refetch(), reloadJobs()]);
@@ -187,13 +133,6 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     scoreApplicant,
   } = useScoreApplicant(handleDataChanged);
 
-  const handleJobChange = useCallback((jobId: number | null): void => {
-    setSelectedJobId(jobId);
-    setSelectedStatusIds(loadSelectedStatusIds(jobId)); // each job keeps its own filter
-    saveSelectedJobId(jobId); // Remember the job scope across reloads
-    setCurrentPage(1); // Reset to page 1 when changing job scope
-  }, []);
-
   const handleSearchChange = useCallback((value: string): void => {
     setSearchTerm(value);
     setCurrentPage(1); // Reset to page 1 when searching
@@ -202,6 +141,16 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
   const handleStatusesChange = useCallback((statusIds: number[]): void => {
     setSelectedStatusIds(statusIds);
     setCurrentPage(1); // Reset to page 1 when filtering
+  }, []);
+
+  const handleScoreFilterChange = useCallback((value: ScoreFilter): void => {
+    setScoreFilter(value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleFlagFilterChange = useCallback((value: FlagFilter): void => {
+    setFlagFilter(value);
+    setCurrentPage(1);
   }, []);
 
   const handleRowClick = (applicant: ApplicantListItem): void => {
@@ -263,6 +212,7 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
         label: applicant.confidence !== undefined ? 'Rescore Applicant' : 'Score Applicant',
         icon: applicant.confidence !== undefined ? 'repeat' : 'target',
         onSelect: () => void scoreApplicant(applicant.id, applicant.name),
+        disabledReason: job.isClosed ? CLOSED_JOB_SCORING_REASON : undefined,
       },
       { label: 'View résumé', icon: 'fileText', onSelect: () => setResumeApplicantId(applicant.id) },
       { label: 'View profile', icon: 'user', onSelect: () => handleRowClick(applicant) },
@@ -342,6 +292,8 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
 
   const handleApplyView = useCallback((view: ListView): void => {
     setSelectedStatusIds(view.statusIds);
+    setScoreFilter(view.scoreFilter);
+    setFlagFilter(view.flagFilter);
     setSearchTerm(view.search);
     setSearchOverride((previous) => ({ value: view.search, token: previous.token + 1 }));
     setSortColumn(view.sortColumn);
@@ -351,6 +303,8 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
 
   const handleClearFilters = useCallback((): void => {
     setSelectedStatusIds([]);
+    setScoreFilter('all');
+    setFlagFilter('all');
     setSearchTerm('');
     setSearchOverride((previous) => ({ value: '', token: previous.token + 1 }));
     setCurrentPage(1);
@@ -379,44 +333,11 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     );
   };
 
-  const handleSync = useCallback(async (): Promise<void> => {
-    try {
-      setSyncing(true);
-      setSyncNotice(null);
-      // Incremental sync: pull new/changed applications from BambooHR. This does
-      // NOT mark anything inactive (only a full sync does), so it can't hide the
-      // list. A full reconcile is a deliberate maintenance action, not this button.
-      const result = await apiService.triggerSync(false);
-      
-      // Check if rate limited
-      if (result.rateLimited) {
-        setSyncNotice({ tone: 'warning', text: result.message });
-      } else {
-        setSyncNotice({ tone: 'success', text: result.message });
-      }
-      
-      // Refresh the list and job selector after sync (even if rate limited, we
-      // have local data). A job we have never seen shows up here, so say so.
-      const knownJobIds = new Set(jobs.map((job) => job.id));
-      const [, refreshedJobs] = await Promise.all([refetch(), reloadJobs()]);
-      setDataVersion((version) => version + 1);
-      const newJobs = refreshedJobs.filter((job) => !knownJobIds.has(job.id));
-      if (newJobs.length > 0) {
-        const names = newJobs.map((job) => job.title).join(', ');
-        setSyncNotice({
-          tone: 'success',
-          text: `${result.message}. New job${newJobs.length !== 1 ? 's' : ''} found: ${names}.`,
-        });
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Sync failed';
-      setSyncNotice({ tone: 'error', text: errorMessage });
-    } finally {
-      setSyncing(false);
-      // Clear message after 8 seconds (longer for rate limit warnings)
-      setTimeout(() => setSyncNotice(null), 8000);
-    }
-  }, [refetch, reloadJobs, jobs]);
+  const { isSyncing, notice: syncNotice, sync } = useBambooHRSync({
+    jobs,
+    reloadJobs,
+    onSynced: handleDataChanged,
+  });
 
   if (loading) {
     return <ApplicantsListSkeleton />;
@@ -436,8 +357,11 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     );
   }
 
-  const selectedJob = jobs.find((job) => job.id === selectedJobId);
-  const hasActiveFilters = searchTerm.trim() !== '' || selectedStatusIds.length > 0;
+  const hasActiveFilters =
+    searchTerm.trim() !== '' ||
+    selectedStatusIds.length > 0 ||
+    scoreFilter !== 'all' ||
+    flagFilter !== 'all';
 
   const renderEmptyState = (): JSX.Element => {
     if (hasActiveFilters) {
@@ -453,9 +377,7 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     return (
       <div className="no-results">
         <p>
-          {selectedJob
-            ? `There are no applicants for ${selectedJob.title} yet.`
-            : 'There are no applicants to show yet.'}
+          There are no applicants for {job.title} yet.
         </p>
         <p className="no-results-hint">
           Press <strong>Sync with BambooHR</strong> to check for new ones. If you just connected,
@@ -469,7 +391,7 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
     <div className="applicants-list">
       <div className="header">
         <div className="header-title">
-          <h1>Job Applicants</h1>
+          <h1>Applicants</h1>
           {totalCount !== undefined && (
             <p className="total-count">
               Showing {applicants.length} of {totalCount} applicant{totalCount !== 1 ? 's' : ''}
@@ -477,18 +399,7 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
             </p>
           )}
         </div>
-        <div className="header-sync">
-          <button
-            onClick={() => void handleSync()}
-            disabled={syncing}
-            className="sync-button"
-            data-help="sync"
-            title="Bring in new applicants, new jobs and status changes from BambooHR"
-          >
-            <Icon name="refresh" isSpinning={syncing} /> {syncing ? 'Syncing…' : 'Sync with BambooHR'}
-          </button>
-          <SyncStatus dataVersion={dataVersion} />
-        </div>
+        <SyncControls isSyncing={isSyncing} onSync={() => void sync()} dataVersion={dataVersion} />
       </div>
 
       {syncNotice && (
@@ -539,10 +450,12 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
       )}
 
       <ApplicantsFilters
-        jobs={jobs}
-        selectedJobId={selectedJobId}
-        onJobChange={handleJobChange}
         selectedStatuses={selectedStatusIds}
+        scoreFilter={scoreFilter}
+        flagFilter={flagFilter}
+        onScoreFilterChange={handleScoreFilterChange}
+        onFlagFilterChange={handleFlagFilterChange}
+        onClearFilters={handleClearFilters}
         onSearchChange={handleSearchChange}
         onStatusesChange={handleStatusesChange}
         searchOverride={searchOverride}
@@ -550,8 +463,6 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
         sortDirection={sortDirection}
         searchTerm={searchTerm}
         onApplyView={handleApplyView}
-        openSettingsRequest={openSettingsRequest}
-        onJobSettingsSaved={() => void handleDataChanged()}
       />
 
       {(!claude.installed || claude.signedIn === false) && (
@@ -570,16 +481,19 @@ export function ApplicantsList({ bambooHRSubdomain, claude }: ApplicantsListProp
 
       <div className="action-bar">
         <ScoringControls
-          jobId={selectedJobId}
+          jobId={job.id}
           statusIds={selectedStatusIds}
           searchTerm={searchTerm}
-          unscoredCount={selectedJob?.unscoredCount ?? 0}
+          scoreFilter={scoreFilter}
+          flagFilter={flagFilter}
+          unscoredCount={job.unscoredCount}
           onScoringComplete={handleDataChanged}
-          readiness={selectedJob ?? null}
-          onOpenJobSettings={() => setOpenSettingsRequest((request) => request + 1)}
+          readiness={job}
+          isJobClosed={job.isClosed}
+          onOpenJobSettings={() => navigate(`/jobs/${job.id}/settings`)}
         />
         <BulkActions
-          selectedJobId={selectedJobId ?? undefined}
+          selectedJobId={job.id}
           onActionComplete={handleDataChanged}
           dataVersion={dataVersion}
         />

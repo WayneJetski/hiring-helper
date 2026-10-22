@@ -24,6 +24,8 @@ interface UseApplicantsParams {
   limit?: number;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  scored?: 'scored' | 'unscored';
+  flagged?: 'flagged' | 'unflagged';
   enabled?: boolean; // When false, defer fetching (e.g. until the default job is resolved)
 }
 
@@ -63,6 +65,8 @@ export function useApplicants(params?: UseApplicantsParams): UseApplicantsResult
         limit: current.limit,
         sortBy: current.sortBy,
         sortDirection: current.sortDirection,
+        scored: current.scored,
+        flagged: current.flagged,
       };
       const { applicants: data, pagination: paginationData, totalCount: total } = await apiService.getApplicants(apiParams || undefined);
       setApplicants(data);
@@ -81,7 +85,7 @@ export function useApplicants(params?: UseApplicantsParams): UseApplicantsResult
 
   useEffect(() => {
     fetchApplicants();
-  }, [params?.statusIds, params?.jobId, params?.search, params?.page, params?.limit, params?.sortBy, params?.sortDirection, params?.enabled, fetchApplicants]);
+  }, [params?.statusIds, params?.jobId, params?.search, params?.page, params?.limit, params?.sortBy, params?.sortDirection, params?.scored, params?.flagged, params?.enabled, fetchApplicants]);
 
   return {
     applicants,
