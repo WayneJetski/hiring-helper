@@ -13,7 +13,6 @@ const emptyLocalJob: LocalJobState = {
   id: 7,
   description: null,
   scoringConfig: null,
-  legacyPrompt: null,
   criteriaConfirmedAt: null,
 };
 
@@ -68,9 +67,22 @@ test('identical settings are left alone', () => {
   assert.equal(job.criteria, 'same');
 });
 
+test('criteria that differ only in whether they were confirmed are not a conflict', () => {
+  const imported = makeJob();
+  imported.settings.criteriaConfirmedAt = null;
+  const local: LocalJobState = {
+    ...emptyLocalJob,
+    description: imported.settings.description,
+    scoringConfig: imported.settings.scoringConfig,
+    criteriaConfirmedAt: 'confirmed here',
+  };
+  const [job] = plan([imported], local).jobs;
+  assert.equal(job.criteria, 'same');
+});
+
 test('empty settings in the file never overwrite anything', () => {
   const imported = makeJob({
-    settings: { description: null, scoringConfig: null, legacyPrompt: null, criteriaConfirmedAt: null },
+    settings: { description: null, scoringConfig: null, criteriaConfirmedAt: null },
   });
   const local: LocalJobState = { ...emptyLocalJob, description: 'Mine', criteriaConfirmedAt: 'x' };
   const [job] = plan([imported], local).jobs;

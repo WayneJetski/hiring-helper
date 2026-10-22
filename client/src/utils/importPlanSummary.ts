@@ -3,7 +3,7 @@
  * dialog shows, and turns the person's choices back into the decisions the server expects.
  */
 
-import type { ImportDecisions, ImportPlan, ScoreConflict } from '../types/transfer.types';
+import type { ImportDecisions, ImportPlan, ImportResult, ScoreConflict } from '../types/transfer.types';
 
 export interface ScoreConflictRow extends ScoreConflict {
   jobTitle: string;
@@ -78,12 +78,7 @@ export function buildDecisions(summary: ImportPlanSummary, choices: ImportChoice
 }
 
 /** One sentence on what an import did, for the message shown afterwards. */
-export function describeImportResult(result: {
-  jobsUpdated: number;
-  scoresFilled: number;
-  scoresReplaced: number;
-  scoresFailed: number;
-}): string {
+export function describeImportResult(result: ImportResult): string {
   const imported = result.scoresFilled + result.scoresReplaced;
   const parts: string[] = [];
   if (result.jobsUpdated > 0) {
@@ -92,8 +87,13 @@ export function describeImportResult(result: {
   if (imported > 0) {
     parts.push(`imported ${imported} score${imported !== 1 ? 's' : ''}`);
   }
-  const text = parts.length > 0 ? `Import finished: ${parts.join(' and ')}.` : 'Import finished: nothing needed changing.';
-  return result.scoresFailed > 0
-    ? `${text} ${result.scoresFailed} applicant${result.scoresFailed !== 1 ? 's' : ''} could not be saved.`
-    : text;
+  let text =
+    parts.length > 0 ? `Import finished: ${parts.join(' and ')}.` : 'Import finished: nothing needed changing.';
+  if (result.scoresFailed > 0) {
+    text += ` ${result.scoresFailed} applicant${result.scoresFailed !== 1 ? 's' : ''} could not be saved.`;
+  }
+  if (result.jobsFailed > 0) {
+    text += ` Settings for ${result.jobsFailed} job${result.jobsFailed !== 1 ? 's' : ''} could not be saved.`;
+  }
+  return text;
 }

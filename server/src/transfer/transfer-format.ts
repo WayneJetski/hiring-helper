@@ -27,8 +27,6 @@ export interface TransferJobSettings {
   description: string | null;
   /** Saved scoring criteria; null when the job uses the defaults. */
   scoringConfig: ScoringConfig | null;
-  /** A hand-written rubric that could not be converted to criteria, if any. */
-  legacyPrompt: string | null;
   /** When a person confirmed the criteria; null when not yet confirmed. */
   criteriaConfirmedAt: string | null;
 }
@@ -56,6 +54,11 @@ export interface TransferJob {
 export interface TransferBundle {
   format: typeof TRANSFER_FORMAT;
   version: typeof TRANSFER_VERSION;
+  /**
+   * The BambooHR company the data came from. Ids are only meaningful within one company,
+   * so a file is only imported into the same one.
+   */
+  company: string;
   exportedAt: string;
   jobs: TransferJob[];
 }
@@ -95,8 +98,6 @@ function parseSettings(value: unknown, label: string): Parsed<TransferJobSetting
 
   const description = parseOptionalText(value.description, `${label} posting`, MAX_POSTING_LENGTH);
   if (!description.ok) return description;
-  const legacyPrompt = parseOptionalText(value.legacyPrompt, `${label} rubric`, MAX_POSTING_LENGTH);
-  if (!legacyPrompt.ok) return legacyPrompt;
   const confirmedAt = parseOptionalText(
     value.criteriaConfirmedAt,
     `${label} confirmation date`,
@@ -114,7 +115,6 @@ function parseSettings(value: unknown, label: string): Parsed<TransferJobSetting
   return ok({
     description: description.value,
     scoringConfig,
-    legacyPrompt: legacyPrompt.value,
     criteriaConfirmedAt: confirmedAt.value,
   });
 }
@@ -285,6 +285,10 @@ export function parseTransferBundle(raw: unknown): ParseResult {
 
   const exportedAt = parseOptionalText(raw.exportedAt, 'Export date', MAX_SHORT_TEXT_LENGTH);
   if (!exportedAt.ok) return exportedAt;
+  const company = parseText(raw.company, 'The company', MAX_SHORT_TEXT_LENGTH);
+  if (!company.ok || company.value.trim() === '') {
+    return fail('This file does not say which BambooHR company it came from.');
+  }
 
   const jobs: TransferJob[] = [];
   const seen = new Set<number>();
@@ -301,6 +305,7 @@ export function parseTransferBundle(raw: unknown): ParseResult {
     bundle: {
       format: TRANSFER_FORMAT,
       version: TRANSFER_VERSION,
+      company: company.value,
       exportedAt: exportedAt.value ?? '',
       jobs,
     },

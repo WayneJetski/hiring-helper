@@ -85,15 +85,15 @@ test('choosing to keep mine lists no replacements; replacing lists every conflic
 
 test('the result message says what happened, with the right plurals', () => {
   assert.equal(
-    describeImportResult({ jobsUpdated: 1, scoresFilled: 2, scoresReplaced: 1, scoresFailed: 0 }),
+    describeImportResult({ jobsUpdated: 1, jobsFailed: 0, scoresFilled: 2, scoresReplaced: 1, scoresFailed: 0 }),
     'Import finished: updated settings for 1 job and imported 3 scores.'
   );
   assert.equal(
-    describeImportResult({ jobsUpdated: 0, scoresFilled: 0, scoresReplaced: 0, scoresFailed: 0 }),
+    describeImportResult({ jobsUpdated: 0, jobsFailed: 0, scoresFilled: 0, scoresReplaced: 0, scoresFailed: 0 }),
     'Import finished: nothing needed changing.'
   );
   assert.match(
-    describeImportResult({ jobsUpdated: 0, scoresFilled: 1, scoresReplaced: 0, scoresFailed: 2 }),
-    /2 applicants could not be saved/
+    describeImportResult({ jobsUpdated: 0, jobsFailed: 1, scoresFilled: 1, scoresReplaced: 0, scoresFailed: 2 }),
+    /2 applicants could not be saved. Settings for 1 job could not be saved/
   );
 });

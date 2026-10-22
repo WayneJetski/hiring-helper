@@ -9,7 +9,7 @@
 
 import { useRef, useState, type ChangeEvent } from 'react';
 import { apiService } from '../services/api.service';
-import type { ImportDecisions, ImportPlan } from '../types/transfer.types';
+import type { ImportDecisions, ImportPlan, ImportResult } from '../types/transfer.types';
 import { describeImportResult } from '../utils/importPlanSummary';
 import { exportFilename, readJsonFile, saveJsonFile } from '../utils/jsonFile';
 import type { Notice } from './icons/StatusIcon';
@@ -68,20 +68,29 @@ export function TransferControls({ onImported, onNotice }: TransferControlsProps
 
   const handleApply = async (decisions: ImportDecisions): Promise<void> => {
     if (!pendingImport) return;
+    let result: ImportResult;
     try {
       setIsApplying(true);
       setApplyError(null);
-      const result = await apiService.applyImport(pendingImport.bundle, decisions);
-      setPendingImport(null);
-      onNotice({
-        tone: result.scoresFailed > 0 ? 'warning' : 'success',
-        text: describeImportResult(result),
-      });
-      await onImported();
+      result = await apiService.applyImport(pendingImport.bundle, decisions);
     } catch (error) {
+      // Shown inside the dialog, which stays open so the person can try again.
       setApplyError(error instanceof Error ? error.message : 'Import failed.');
-    } finally {
       setIsApplying(false);
+      return;
+    }
+
+    setPendingImport(null);
+    setIsApplying(false);
+    const hasFailures = result.scoresFailed > 0 || result.jobsFailed > 0;
+    onNotice({ tone: hasFailures ? 'warning' : 'success', text: describeImportResult(result) });
+    try {
+      await onImported();
+    } catch {
+      onNotice({
+        tone: 'warning',
+        text: `${describeImportResult(result)} Reload the page to see the updated counts.`,
+      });
     }
   };
 

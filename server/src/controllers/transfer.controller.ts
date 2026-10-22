@@ -7,7 +7,7 @@ import type { Request, Response } from 'express';
 import { respondWithError } from '../errors/respond-with-error.js';
 import { parseTransferBundle, type TransferBundle } from '../transfer/transfer-format.js';
 import { TransferExportService } from '../transfer/transfer-export.service.js';
-import { TransferImportService } from '../transfer/transfer-import.service.js';
+import { ImportRefusedError, TransferImportService } from '../transfer/transfer-import.service.js';
 import type { ImportDecisions } from '../transfer/transfer-plan.js';
 
 const exportService = new TransferExportService();
@@ -31,6 +31,13 @@ function parseDecisions(value: unknown): ImportDecisions | null {
 
 function sendInvalidFile(res: Response, message: string): void {
   res.status(400).json({ error: 'Invalid file', message });
+}
+
+/** Answers a refused import with its plain-language reason; returns false for other errors. */
+function respondIfRefused(res: Response, error: unknown): boolean {
+  if (!(error instanceof ImportRefusedError)) return false;
+  sendInvalidFile(res, error.message);
+  return true;
 }
 
 export class TransferController {
@@ -63,6 +70,7 @@ export class TransferController {
       }
       res.json({ data: await importService.preview(parsed.bundle) });
     } catch (error) {
+      if (respondIfRefused(res, error)) return;
       console.error('Failed to preview import:', error);
       respondWithError(res, error, 'Failed to read the export file');
     }
@@ -93,6 +101,7 @@ export class TransferController {
       const bundle: TransferBundle = parsed.bundle;
       res.json({ data: await importService.apply(bundle, decisions) });
     } catch (error) {
+      if (respondIfRefused(res, error)) return;
       console.error('Failed to import:', error);
       respondWithError(res, error, 'Failed to import job settings and scores');
     }

@@ -43,7 +43,6 @@ export function makeJob(overrides: Partial<TransferJob> = {}): TransferJob {
     settings: {
       description: 'We are hiring an analyst.',
       scoringConfig: cloneDefaultScoringConfig(),
-      legacyPrompt: null,
       criteriaConfirmedAt: '2026-10-01 10:00:00',
     },
     applications: [makeApplication(101)],
@@ -55,6 +54,7 @@ export function makeBundle(jobs: TransferJob[] = [makeJob()]): TransferBundle {
   return {
     format: TRANSFER_FORMAT,
     version: TRANSFER_VERSION,
+    company: 'acme',
     exportedAt: '2026-10-22T12:00:00.000Z',
     jobs,
   };

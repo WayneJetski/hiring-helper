@@ -34,6 +34,7 @@ export interface ImportDecisions {
 
 export interface ImportResult {
   jobsUpdated: number;
+  jobsFailed: number;
   scoresFilled: number;
   scoresReplaced: number;
   scoresFailed: number;

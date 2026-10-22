@@ -20,6 +20,16 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ): void {
+  // The body parser's own error for an oversized request (only the import route allows large ones).
+  if ((err as { type?: string }).type === 'entity.too.large') {
+    res.status(413).json({
+      error: 'File too large',
+      message: 'That file is too large to import. The limit is 50 MB.',
+      statusCode: 413,
+    });
+    return;
+  }
+
   const statusCode =
     err instanceof UpstreamServiceError ? err.responseStatus : err.statusCode || err.status || 500;
   const message = err.message || 'Internal Server Error';

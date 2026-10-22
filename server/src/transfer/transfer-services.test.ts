@@ -11,6 +11,7 @@ import type { ApplicationFlag } from '../types/flags.js';
 import { TransferExportService, type TransferExportDependencies } from './transfer-export.service.js';
 import { TransferImportService, type TransferImportDependencies } from './transfer-import.service.js';
 import { parseTransferBundle } from './transfer-format.js';
+import { ImportRefusedError } from './transfer-import.service.js';
 import { makeSummary } from './transfer-fixtures.js';
 
 interface FakeJob {
@@ -30,6 +31,8 @@ class FakeMachine {
   summaries = new Map<number, ApplicantSummary>();
   flags: Record<number, ApplicationFlag[]> = {};
   failSummaryFor: number | null = null;
+  failSettingsForJob: number | null = null;
+  company = 'acme';
 
   addJob(job: FakeJob): void {
     this.jobs.set(job.id, job);
@@ -58,6 +61,7 @@ class FakeMachine {
       scoresRepo: { getAllScores: async () => this.scores },
       summaryRepo: { getSummary: async (id: number) => this.summaries.get(id) ?? null },
       flagsRepo: { getFlagsMap: () => this.flags },
+      companySubdomain: () => this.company,
       now: () => new Date('2026-10-22T12:00:00Z'),
     } as unknown as TransferExportDependencies);
   }
@@ -67,23 +71,20 @@ class FakeMachine {
       jobsRepo: {
         getById: (id: number) => this.jobs.get(id),
         savePosting: (id: number, posting: { description: string }) => {
+          if (this.failSettingsForJob === id) throw new Error('database is locked');
           const job = this.jobs.get(id);
           if (job) job.description = posting.description;
           return !!job;
         },
         importCriteria: (
           id: number,
-          criteria: {
-            scoringConfigJson: string | null;
-            legacyPrompt: string | null;
-            criteriaConfirmedAt: string | null;
-          }
+          criteria: { scoringConfigJson: string | null; criteriaConfirmedAt: string | null }
         ) => {
           const job = this.jobs.get(id);
           if (!job) return false;
           job.scoringConfig = criteria.scoringConfigJson ?? undefined;
-          job.systemPrompt = criteria.legacyPrompt ?? undefined;
-          job.criteriaConfirmedAt = criteria.criteriaConfirmedAt ?? undefined;
+          // Like the real repository: a confirmation is set, never cleared.
+          job.criteriaConfirmedAt = criteria.criteriaConfirmedAt ?? job.criteriaConfirmedAt;
           return true;
         },
       },
@@ -100,8 +101,13 @@ class FakeMachine {
           if (this.failSummaryFor === id) throw new Error('disk full');
           this.summaries.set(id, summary);
         },
+        deleteSummary: async (id: number) => {
+          this.summaries.delete(id);
+        },
       },
+      companySubdomain: () => this.company,
       flagsRepo: {
+        getFlags: (id: number) => this.flags[id] ?? [],
         setFlags: (id: number, flags: ApplicationFlag[]) => {
           this.flags[id] = flags;
         },
@@ -161,7 +167,7 @@ test('importing into a machine with nothing fills settings, scores, reports and 
 
   const result = await receiver.importer().apply(bundle, keepMine);
 
-  assert.deepEqual(result, { jobsUpdated: 1, scoresFilled: 2, scoresReplaced: 0, scoresFailed: 0 });
+  assert.deepEqual(result, { jobsUpdated: 1, jobsFailed: 0, scoresFilled: 2, scoresReplaced: 0, scoresFailed: 0 });
   assert.equal(receiver.jobs.get(7)?.description, 'We are hiring an analyst.');
   assert.ok(receiver.jobs.get(7)?.scoringConfig);
   assert.equal(receiver.jobs.get(7)?.criteriaConfirmedAt, '2026-10-01 10:00:00');
@@ -187,7 +193,7 @@ test('what is already scored or written here is kept unless the person chooses t
 
   const result = await receiver.importer().apply(bundle, keepMine);
 
-  assert.deepEqual(result, { jobsUpdated: 1, scoresFilled: 1, scoresReplaced: 0, scoresFailed: 0 });
+  assert.deepEqual(result, { jobsUpdated: 1, jobsFailed: 0, scoresFilled: 1, scoresReplaced: 0, scoresFailed: 0 });
   assert.equal(receiver.jobs.get(7)?.description, 'My own posting');
   assert.equal(receiver.scores['101'], 20);
   assert.equal(receiver.scores['102'], 40); // the unscored one was still filled
@@ -249,6 +255,80 @@ test('a job the receiver has not synced is skipped', async () => {
     replaceSettingsJobIds: [7],
     replaceScoreApplicationIds: [101, 102],
   });
-  assert.deepEqual(result, { jobsUpdated: 0, scoresFilled: 0, scoresReplaced: 0, scoresFailed: 0 });
+  assert.deepEqual(result, { jobsUpdated: 0, jobsFailed: 0, scoresFilled: 0, scoresReplaced: 0, scoresFailed: 0 });
   assert.deepEqual(receiver.scores, {});
+});
+
+test('a file from a different BambooHR company is refused, whatever the ids', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.company = 'other-co';
+  const bundle = await shareFile(scoredMachine());
+
+  await assert.rejects(receiver.importer().preview(bundle), ImportRefusedError);
+  await assert.rejects(receiver.importer().apply(bundle, keepMine), /different BambooHR company \(acme\)/);
+  assert.deepEqual(receiver.scores, {});
+});
+
+test('the company check ignores capitalisation', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.company = 'ACME';
+  await receiver.importer().preview(await shareFile(scoredMachine()));
+});
+
+test('importing is refused until BambooHR is connected', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.company = '';
+  await assert.rejects(receiver.importer().preview(await shareFile(scoredMachine())), /Connect BambooHR first/);
+});
+
+test('salary flags worked out here are kept; judged flags come from the file', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.flags[101] = ['salary-high', 'studying'];
+  const sender = scoredMachine();
+  sender.flags[101] = ['tenure', 'salary-low'];
+
+  await receiver.importer().apply(await shareFile(sender), keepMine);
+
+  assert.deepEqual([...receiver.flags[101]].sort(), ['salary-high', 'tenure']);
+});
+
+test('replacing with a score that has no report removes the old report', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.score(101, makeSummary({ confidence: 20, brief: 'Old report' }));
+  const sender = scoredMachine();
+  sender.summaries.delete(101);
+
+  await receiver.importer().apply(await shareFile(sender), {
+    replaceSettingsJobIds: [],
+    replaceScoreApplicationIds: [101],
+  });
+
+  assert.equal(receiver.scores['101'], 85);
+  assert.equal(receiver.summaries.has(101), false);
+});
+
+test('a job whose settings cannot be saved is counted and the scores still import', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.failSettingsForJob = 7;
+
+  const result = await receiver.importer().apply(await shareFile(scoredMachine()), keepMine);
+
+  assert.equal(result.jobsFailed, 1);
+  assert.equal(result.jobsUpdated, 0);
+  assert.equal(result.scoresFilled, 2);
+});
+
+test('replacing criteria never un-confirms a job that was ready to score', async () => {
+  const receiver = syncedOnlyMachine();
+  receiver.jobs.get(7)!.scoringConfig = JSON.stringify({ different: true });
+  receiver.jobs.get(7)!.criteriaConfirmedAt = 'confirmed here';
+  const sender = scoredMachine();
+  sender.jobs.get(7)!.criteriaConfirmedAt = undefined;
+
+  await receiver.importer().apply(await shareFile(sender), {
+    replaceSettingsJobIds: [7],
+    replaceScoreApplicationIds: [],
+  });
+
+  assert.equal(receiver.jobs.get(7)?.criteriaConfirmedAt, 'confirmed here');
 });

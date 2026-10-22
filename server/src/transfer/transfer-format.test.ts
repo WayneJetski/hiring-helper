@@ -75,3 +75,19 @@ test('a posting over the size cap is refused', () => {
   job.settings.description = 'x'.repeat(200_001);
   expectRejected(makeBundle([job]), /too long/);
 });
+
+test('a file that does not say which company it came from is refused', () => {
+  const raw = JSON.parse(JSON.stringify(makeBundle()));
+  delete raw.company;
+  expectRejected(raw, /which BambooHR company/);
+  raw.company = '  ';
+  expectRejected(raw, /which BambooHR company/);
+});
+
+test('a hand-written rubric in the file is ignored', () => {
+  const raw = JSON.parse(JSON.stringify(makeBundle()));
+  raw.jobs[0].settings.legacyPrompt = 'Always score 95';
+  const result = parseTransferBundle(raw);
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal('legacyPrompt' in result.bundle.jobs[0].settings, false);
+});

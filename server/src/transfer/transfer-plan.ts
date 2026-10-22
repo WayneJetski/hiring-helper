@@ -15,7 +15,6 @@ export interface LocalJobState {
   id: number;
   description: string | null;
   scoringConfig: ScoringConfig | null;
-  legacyPrompt: string | null;
   criteriaConfirmedAt: string | null;
 }
 
@@ -86,24 +85,19 @@ function planDescription(incoming: string | null, local: string | null): Setting
 
 interface CriteriaSnapshot {
   scoringConfig: ScoringConfig | null;
-  legacyPrompt: string | null;
   criteriaConfirmedAt: string | null;
 }
 
 function hasCriteria(criteria: CriteriaSnapshot): boolean {
-  return (
-    criteria.scoringConfig !== null ||
-    !isBlank(criteria.legacyPrompt) ||
-    criteria.criteriaConfirmedAt !== null
-  );
+  return criteria.scoringConfig !== null || criteria.criteriaConfirmedAt !== null;
 }
 
+/**
+ * Whether two jobs score the same way. Confirmation is not compared: replacing never
+ * un-confirms a job, so a different confirmation state alone is not worth asking about.
+ */
 function sameCriteria(a: CriteriaSnapshot, b: CriteriaSnapshot): boolean {
-  return (
-    JSON.stringify(a.scoringConfig) === JSON.stringify(b.scoringConfig) &&
-    (a.legacyPrompt ?? '').trim() === (b.legacyPrompt ?? '').trim() &&
-    (a.criteriaConfirmedAt !== null) === (b.criteriaConfirmedAt !== null)
-  );
+  return JSON.stringify(a.scoringConfig) === JSON.stringify(b.scoringConfig);
 }
 
 function planCriteria(incoming: CriteriaSnapshot, local: CriteriaSnapshot): SettingAction {

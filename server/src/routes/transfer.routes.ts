@@ -13,7 +13,7 @@ const controller = new TransferController();
 router.get('/export', (req, res) => controller.exportBundle(req, res));
 
 // POST /api/transfer/import/preview - what an export file would fill or conflict with (changes nothing)
-router.post('/import/preview', (req, res) => controller.previewImport(req, res));
+router.post('/import/preview', requireBrowserOrigin, (req, res) => controller.previewImport(req, res));
 
 // POST /api/transfer/import/apply - write the file's data, replacing conflicts only as chosen
 router.post('/import/apply', requireBrowserOrigin, (req, res) => controller.applyImport(req, res));

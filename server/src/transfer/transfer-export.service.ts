@@ -9,7 +9,9 @@ import { ApplicationSummaryRepository } from '../repositories/application-summar
 import { ApplicationsRepository } from '../repositories/applications.repository.js';
 import { JobsRepository, type Job } from '../repositories/jobs.repository.js';
 import { ScoresRepository } from '../repositories/scores.repository.js';
-import { validateScoringConfig, type ScoringConfig } from '../scoring/scoring-config.js';
+import { parseStoredScoringConfig } from '../scoring/scoring-config.js';
+import { config } from '../config/env.config.js';
+import { mapInChunks } from './map-in-chunks.js';
 import {
   TRANSFER_FORMAT,
   TRANSFER_VERSION,
@@ -19,6 +21,9 @@ import {
   type TransferJobSettings,
 } from './transfer-format.js';
 
+/** Summary files read at once; enough to be quick without opening thousands together. */
+const SUMMARY_READ_CONCURRENCY = 25;
+
 export interface TransferExportDependencies {
   jobsRepo: Pick<JobsRepository, 'getAll'>;
   applicationsRepo: Pick<ApplicationsRepository, 'getFiltered'>;
@@ -26,25 +31,15 @@ export interface TransferExportDependencies {
   scoresRepo: Pick<ScoresRepository, 'getAllScores'>;
   summaryRepo: Pick<ApplicationSummaryRepository, 'getSummary'>;
   flagsRepo: Pick<ApplicationFlagsRepository, 'getFlagsMap'>;
+  /** The connected BambooHR company, written into the file so it is only imported into the same one. */
+  companySubdomain: () => string;
   now: () => Date;
-}
-
-/** The saved criteria as a validated config; corrupt stored JSON counts as "defaults". */
-function readScoringConfig(json: string | undefined): ScoringConfig | null {
-  if (!json) return null;
-  try {
-    const validated = validateScoringConfig(JSON.parse(json));
-    return validated.ok ? validated.config : null;
-  } catch {
-    return null;
-  }
 }
 
 function toSettings(job: Job): TransferJobSettings {
   return {
     description: job.description ?? null,
-    scoringConfig: readScoringConfig(job.scoringConfig),
-    legacyPrompt: job.systemPrompt ?? null,
+    scoringConfig: parseStoredScoringConfig(job.scoringConfig),
     criteriaConfirmedAt: job.criteriaConfirmedAt ?? null,
   };
 }
@@ -53,7 +48,6 @@ function hasSettings(settings: TransferJobSettings): boolean {
   return (
     settings.description !== null ||
     settings.scoringConfig !== null ||
-    settings.legacyPrompt !== null ||
     settings.criteriaConfirmedAt !== null
   );
 }
@@ -69,6 +63,7 @@ export class TransferExportService {
       scoresRepo: new ScoresRepository(),
       summaryRepo: new ApplicationSummaryRepository(),
       flagsRepo: new ApplicationFlagsRepository(),
+      companySubdomain: () => config.bambooHR.subdomain,
       now: () => new Date(),
       ...dependencies,
     };
@@ -82,19 +77,23 @@ export class TransferExportService {
 
     const jobs: TransferJob[] = [];
     for (const job of jobsRepo.getAll()) {
-      const applications: TransferApplication[] = [];
-      for (const application of applicationsRepo.getFiltered({ jobId: job.id })) {
-        const score = scores[application.id.toString()];
-        if (score === undefined) continue;
-        const applicant = applicantsRepo.getById(application.applicantId);
-        applications.push({
-          id: application.id,
-          name: applicant ? `${applicant.firstName} ${applicant.lastName}`.trim() : '',
-          score,
-          summary: await summaryRepo.getSummary(application.id),
-          flags: flagsByApplication[application.id] ?? [],
-        });
-      }
+      const scoredApplications = applicationsRepo
+        .getFiltered({ jobId: job.id })
+        .filter((application) => scores[application.id.toString()] !== undefined);
+      const applications: TransferApplication[] = await mapInChunks(
+        scoredApplications,
+        SUMMARY_READ_CONCURRENCY,
+        async (application) => {
+          const applicant = applicantsRepo.getById(application.applicantId);
+          return {
+            id: application.id,
+            name: applicant ? `${applicant.firstName} ${applicant.lastName}`.trim() : '',
+            score: scores[application.id.toString()],
+            summary: await summaryRepo.getSummary(application.id),
+            flags: flagsByApplication[application.id] ?? [],
+          };
+        }
+      );
 
       const settings = toSettings(job);
       // A job with nothing to share only adds noise to the file.
@@ -105,6 +104,7 @@ export class TransferExportService {
     return {
       format: TRANSFER_FORMAT,
       version: TRANSFER_VERSION,
+      company: this.dependencies.companySubdomain(),
       exportedAt: this.dependencies.now().toISOString(),
       jobs,
     };
