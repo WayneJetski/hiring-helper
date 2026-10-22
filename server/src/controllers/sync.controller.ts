@@ -22,7 +22,8 @@ export class SyncController {
       const forceFull = req.body?.force === true || req.query.force === 'true';
 
       console.info(`🔄 Manual sync triggered (force: ${forceFull})`);
-      const syncedCount = await syncService.syncApplications(forceFull);
+      const { syncedCount, statusUpdatesPulled } =
+        await syncService.syncApplicationsWithDetails(forceFull);
 
       // Check if sync was rate limited
       const lastSync = syncService.getLastSync();
@@ -36,7 +37,6 @@ export class SyncController {
         return;
       }
 
-      const statusUpdatesPulled = syncService.getLastStatusUpdatesPulled();
       const parts: string[] = [];
       if (syncedCount > 0) {
         parts.push(`Synced ${syncedCount} application${syncedCount !== 1 ? 's' : ''}`);
@@ -90,16 +90,19 @@ export class SyncController {
   ): Promise<void> {
     try {
       const lastSync = syncService.getLastSync();
+      const isSyncing = syncService.isSyncing();
 
       if (!lastSync) {
         res.json({
           message: 'No sync has been performed yet',
+          isSyncing,
           lastSync: null,
         });
         return;
       }
 
       res.json({
+        isSyncing,
         lastSync: {
           timestamp: lastSync.timestamp,
           syncType: lastSync.syncType,
