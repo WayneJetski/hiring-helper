@@ -22,7 +22,8 @@ export class SyncController {
       const forceFull = req.body?.force === true || req.query.force === 'true';
 
       console.info(`🔄 Manual sync triggered (force: ${forceFull})`);
-      const syncedCount = await syncService.syncApplications(forceFull);
+      const { syncedCount, statusUpdatesPulled } =
+        await syncService.syncApplicationsWithDetails(forceFull);
 
       // Check if sync was rate limited
       const lastSync = syncService.getLastSync();
@@ -36,7 +37,6 @@ export class SyncController {
         return;
       }
 
-      const statusUpdatesPulled = syncService.getLastStatusUpdatesPulled();
       const parts: string[] = [];
       if (syncedCount > 0) {
         parts.push(`Synced ${syncedCount} application${syncedCount !== 1 ? 's' : ''}`);

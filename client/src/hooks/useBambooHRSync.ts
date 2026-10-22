@@ -40,9 +40,11 @@ export function useBambooHRSync({
 
   // The latest callbacks, so the polling below does not restart when they change.
   const refreshRef = useRef<() => Promise<void>>(async () => {});
-  refreshRef.current = async (): Promise<void> => {
-    await Promise.all([reloadJobs(), onSynced?.()]);
-  };
+  useEffect(() => {
+    refreshRef.current = async (): Promise<void> => {
+      await Promise.all([reloadJobs(), onSynced?.()]);
+    };
+  }, [reloadJobs, onSynced]);
 
   useEffect(
     () => () => {
@@ -56,26 +58,38 @@ export function useBambooHRSync({
   useEffect(() => {
     if (isSyncing) return;
     let isCancelled = false;
+    let isChecking = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
     let wasRunning = false;
 
+    const schedulePoll = (): void => {
+      if (pollTimer) clearTimeout(pollTimer);
+      pollTimer = setTimeout(() => {
+        pollTimer = null;
+        void check();
+      }, RUNNING_POLL_INTERVAL_MS);
+    };
+
     const check = async (): Promise<void> => {
-      let isRunning = false;
+      if (isChecking) return;
+      isChecking = true;
       try {
-        isRunning = await apiService.isSyncRunning();
+        const isRunning = await apiService.isSyncRunning();
+        if (isCancelled) return;
+        setIsSyncingElsewhere(isRunning);
+        if (wasRunning && !isRunning) {
+          refreshRef
+            .current()
+            .catch((error) => console.error('Failed to refresh after sync:', error));
+        }
+        wasRunning = isRunning;
+        if (isRunning) schedulePoll();
       } catch {
-        // A failed check leaves the button as it was; the next check tries again.
-        return;
-      }
-      if (isCancelled) return;
-      setIsSyncingElsewhere(isRunning);
-      if (wasRunning && !isRunning) void refreshRef.current();
-      wasRunning = isRunning;
-      if (isRunning) {
-        pollTimer = setTimeout(() => {
-          pollTimer = null;
-          void check();
-        }, RUNNING_POLL_INTERVAL_MS);
+        // The server may be restarting. Keep asking while a sync was running, so the
+        // button is not left disabled; otherwise the next focus or reload checks again.
+        if (!isCancelled && wasRunning) schedulePoll();
+      } finally {
+        isChecking = false;
       }
     };
     const handleFocus = (): void => {

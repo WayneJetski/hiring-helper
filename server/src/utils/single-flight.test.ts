@@ -2,14 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SingleFlight } from './single-flight.js';
 
-function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: Error) => void } {
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void;
-  let reject!: (error: Error) => void;
-  const promise = new Promise<T>((res, rej) => {
+  const promise = new Promise<T>((res) => {
     resolve = res;
-    reject = rej;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 }
 
 test('callers that arrive while a run is in progress share its result', async () => {
@@ -42,4 +40,17 @@ test('a failed run clears the guard so the next attempt can run', async () => {
   await assert.rejects(flight.run(async () => Promise.reject(new Error('boom'))), /boom/);
   assert.equal(flight.isRunning, false);
   assert.equal(await flight.run(async () => 'ok'), 'ok');
+});
+
+test('whenIdle resolves once the run ends, even when it failed', async () => {
+  const flight = new SingleFlight<string>();
+  assert.equal(await flight.whenIdle(), undefined);
+
+  const gate = deferred<string>();
+  const failing = flight.run(() => gate.promise);
+  const idle = flight.whenIdle();
+  gate.resolve('x');
+  await failing;
+  assert.equal(await idle, undefined);
+  assert.equal(flight.isRunning, false);
 });
