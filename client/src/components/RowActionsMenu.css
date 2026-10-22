@@ -51,6 +51,15 @@
   background: var(--hh-tint);
 }
 
+.row-actions-item:disabled {
+  color: var(--hh-subtle);
+  cursor: not-allowed;
+}
+
+.row-actions-item:disabled:hover {
+  background: none;
+}
+
 .row-actions-item.is-danger {
   color: #b42318;
 }

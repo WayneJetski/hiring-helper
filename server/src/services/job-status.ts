@@ -19,6 +19,10 @@ export function isClosedJobStatus(status: string | null | undefined): boolean {
 export const CLOSED_JOB_SCORING_MESSAGE =
   'This job is closed, so its applicants can no longer be scored.';
 
+/** Returned (as a 409) when someone tries to move or reject applicants of a closed job. */
+export const CLOSED_JOB_CHANGES_MESSAGE =
+  'This job is closed, so its applicants can no longer be moved or rejected.';
+
 /**
  * Stored jobs that BambooHR no longer lists and are not already closed. An empty
  * listing is never trusted (it more likely means a failed or partial response than

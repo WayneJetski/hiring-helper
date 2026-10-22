@@ -24,6 +24,8 @@ interface StageMoverProps {
   hasRejectShortcut?: boolean;
   /** `onDark` restyles it for the applicant page's dark header band. */
   variant?: 'default' | 'onDark';
+  /** When set, moving is not allowed (a closed job); shown as the reason on hover. */
+  disabledReason?: string;
 }
 
 export function StageMover({
@@ -32,11 +34,13 @@ export function StageMover({
   onMoved,
   hasRejectShortcut = false,
   variant = 'default',
+  disabledReason,
 }: StageMoverProps): JSX.Element {
   const [selectedStatusId, setSelectedStatusId] = useState<number | ''>('');
   const [isMoving, setIsMoving] = useState<boolean>(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
+  const isLocked = disabledReason !== undefined;
   const notAFitStatus = statuses.find((status) => status.label === NOT_A_FIT_LABEL);
 
   const move = async (statusId: number): Promise<void> => {
@@ -55,13 +59,18 @@ export function StageMover({
   };
 
   return (
-    <div className={`stage-move${variant === 'onDark' ? ' stage-move--on-dark' : ''}`} data-help="stage">
+    <div
+      className={`stage-move${variant === 'onDark' ? ' stage-move--on-dark' : ''}`}
+      data-help="stage"
+      title={disabledReason}
+    >
       <label className="stage-move-label" htmlFor={`stage-move-${applicantId}`}>
         Move to stage:
       </label>
       <select
         id={`stage-move-${applicantId}`}
         className="stage-move-select"
+        disabled={isLocked}
         value={selectedStatusId}
         onChange={(e) => setSelectedStatusId(e.target.value === '' ? '' : Number(e.target.value))}
       >
@@ -79,7 +88,7 @@ export function StageMover({
       <button
         className="stage-move-button"
         onClick={() => selectedStatusId !== '' && void move(selectedStatusId)}
-        disabled={isMoving || selectedStatusId === ''}
+        disabled={isLocked || isMoving || selectedStatusId === ''}
       >
         {isMoving ? 'Moving…' : 'Move'}
       </button>
@@ -87,7 +96,7 @@ export function StageMover({
         <button
           className="stage-move-reject"
           onClick={() => void move(notAFitStatus.id)}
-          disabled={isMoving}
+          disabled={isLocked || isMoving}
           title={`Move straight to "${NOT_A_FIT_LABEL}"`}
         >
           {NOT_A_FIT_LABEL}

@@ -29,7 +29,7 @@ import {
   getConfidenceClass,
   getConfidenceLevel,
 } from '../utils/matchDisplay';
-import { CLOSED_JOB_SCORING_REASON } from '../utils/scoreApplicantOutcome';
+import { CLOSED_JOB_CHANGES_REASON, CLOSED_JOB_SCORING_REASON } from '../utils/closedJob';
 import { buildCandidateLink } from '../utils/bamboohrLinks';
 import type { FlagFilter, ListView, ScoreFilter } from '../utils/savedViews';
 import type { ApplicantListItem, JobSummary, SetupStatus, Status } from '../types/applicant.types';
@@ -199,12 +199,14 @@ export function ApplicantsList({
         label: 'Move to stage',
         icon: 'arrowRight',
         onSelect: () => setRowAction({ mode: 'move', applicantId: applicant.id }),
+        disabledReason: job.isClosed ? CLOSED_JOB_CHANGES_REASON : undefined,
       },
       {
         label: 'Reject',
         icon: 'xCircle',
         isDanger: true,
         onSelect: () => setRowAction({ mode: 'reject', applicantId: applicant.id }),
+        disabledReason: job.isClosed ? CLOSED_JOB_CHANGES_REASON : undefined,
       },
     ],
     [
@@ -494,6 +496,7 @@ export function ApplicantsList({
         />
         <BulkActions
           selectedJobId={job.id}
+          isJobClosed={job.isClosed}
           onActionComplete={handleDataChanged}
           dataVersion={dataVersion}
         />
@@ -666,6 +669,7 @@ export function ApplicantsList({
             applicantId={resumeApplicant.id}
             statuses={statuses}
             hasRejectShortcut
+            disabledReason={job.isClosed ? CLOSED_JOB_CHANGES_REASON : undefined}
             onMoved={async () => {
               const nextId = nextResumeApplicant?.id ?? null;
               await handleDataChanged();

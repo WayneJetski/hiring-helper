@@ -9,6 +9,9 @@ import { parseFlagFilter, parseScoreFilter } from '../repositories/ai-filters.js
 import type { Request, Response } from 'express';
 import { respondWithError } from '../errors/respond-with-error.js';
 import { ApplicantQueryService, DataIntegrityError } from '../services/applicant-query.service.js';
+import { ApplicationsRepository } from '../repositories/applications.repository.js';
+import { JobsRepository } from '../repositories/jobs.repository.js';
+import { CLOSED_JOB_CHANGES_MESSAGE, isClosedJobStatus } from '../services/job-status.js';
 import { ApplicationStatesRepository } from '../repositories/application-states.repository.js';
 import { BulkActionService } from '../services/bulk-action.service.js';
 import { BambooPushService } from '../services/bamboo-push.service.js';
@@ -20,6 +23,21 @@ const applicantQueryService = new ApplicantQueryService();
 const statesRepository = new ApplicationStatesRepository();
 const bulkActionService = new BulkActionService();
 const bambooPushService = new BambooPushService();
+const applicationsRepository = new ApplicationsRepository();
+const jobsRepository = new JobsRepository();
+
+/**
+ * A closed job is read-only: moving or rejecting its applicants is refused. Answers
+ * 409 and returns true when any of the given jobs is closed, so the caller stops.
+ */
+function refuseIfJobClosed(res: Response, jobIds: Array<number | undefined>): boolean {
+  const isAnyClosed = jobIds.some(
+    (jobId) => jobId !== undefined && isClosedJobStatus(jobsRepository.getById(jobId)?.status)
+  );
+  if (!isAnyClosed) return false;
+  res.status(409).json({ error: 'Job closed', message: CLOSED_JOB_CHANGES_MESSAGE });
+  return true;
+}
 
 /** Raw (untrusted) body of a bulk action request. */
 interface BulkRequestBody {
@@ -276,6 +294,7 @@ export class ApplicantsController {
         res.status(400).json({ error: 'Invalid request', message: 'statusId (number) is required' });
         return;
       }
+      if (refuseIfJobClosed(res, [applicationsRepository.getById(applicationId)?.jobId])) return;
       const result = applicantQueryService.moveToStage(applicationId, statusId);
       if (!result) {
         res.status(404).json({
@@ -349,6 +368,7 @@ export class ApplicantsController {
         res.status(400).json({ error: 'Invalid request', message: parsed.error });
         return;
       }
+      if (refuseIfJobClosed(res, [parsed.jobId])) return;
       const statusId = parsed.statusId as number; // guaranteed by requireStatus
       const result =
         action === 'reject'
@@ -391,7 +411,10 @@ export class ApplicantsController {
         });
         return;
       }
-      res.json(bulkActionService.restore(entries as Array<{ id: number; statusId: number }>));
+      const restoreEntries = entries as Array<{ id: number; statusId: number }>;
+      const jobIds = restoreEntries.map((entry) => applicationsRepository.getById(entry.id)?.jobId);
+      if (refuseIfJobClosed(res, jobIds)) return;
+      res.json(bulkActionService.restore(restoreEntries));
     } catch (error) {
       console.error('Failed to restore statuses:', error);
       respondWithError(res, error, 'Failed to restore statuses');
@@ -433,6 +456,7 @@ export class ApplicantsController {
         res.status(400).json({ error: 'Invalid request', message: 'jobId (number) is required' });
         return;
       }
+      if (refuseIfJobClosed(res, [jobId])) return;
       res.json(bulkActionService.cleanupDuplicates(jobId));
     } catch (error) {
       console.error('Failed to clean up duplicates:', error);
