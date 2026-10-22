@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useApplicant } from '../hooks/useApplicant';
 import { useScoreApplicant } from '../hooks/useScoreApplicant';
 import { apiService } from '../services/api.service';
@@ -17,9 +17,9 @@ import { StatusIcon } from './icons/StatusIcon';
 import { RatingStars } from './icons/RatingStars';
 import type { Status } from '../types/applicant.types';
 import { getNeighbors, loadNavigationIds } from '../utils/applicantNavigation';
+import { CLOSED_JOB_SCORING_REASON } from '../utils/scoreApplicantOutcome';
 import { buildCandidateLink } from '../utils/bamboohrLinks';
 import { toSafeWebUrl } from '../utils/safeUrl';
-import { saveSelectedJobId } from '../utils/filterStorage';
 import {
   FLAG_DISPLAY,
   formatPhoneNumber,
@@ -62,14 +62,9 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
     };
   }, []);
 
+  // Back goes to this applicant's job once it is known; the jobs list otherwise.
   const handleBack = (): void => {
-    navigate('/');
-  };
-
-  // Open the list on this applicant's job (the list remembers its job selection).
-  const handleOpenJob = (jobId: number): void => {
-    saveSelectedJobId(jobId);
-    navigate('/');
+    navigate(applicant ? `/jobs/${applicant.jobId}` : '/');
   };
 
   const neighbors = useMemo(
@@ -133,7 +128,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
     return (
       <div className="applicant-detail">
         <button onClick={handleBack} className="back-button">
-          <Icon name="arrowLeft" /> Back to list
+          <Icon name="arrowLeft" /> Back to applicants
         </button>
         <div className="load-error">Error: {error}</div>
         {resumeModal}
@@ -145,7 +140,7 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
     return (
       <div className="applicant-detail">
         <button onClick={handleBack} className="back-button">
-          <Icon name="arrowLeft" /> Back to list
+          <Icon name="arrowLeft" /> Back to applicants
         </button>
         <div className="load-error">Applicant not found</div>
       </div>
@@ -164,14 +159,14 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
         <nav className="crumbs" aria-label="Breadcrumb" data-help="back">
           <ol>
             <li>
-              <button type="button" className="crumb-link" onClick={handleBack}>
-                <Icon name="arrowLeft" size={16} /> Job Applicants
-              </button>
+              <Link to="/" className="crumb-link">
+                <Icon name="arrowLeft" size={16} /> Jobs
+              </Link>
             </li>
             <li>
-              <button type="button" className="crumb-link" onClick={() => handleOpenJob(applicant.jobId)}>
+              <Link to={`/jobs/${applicant.jobId}`} className="crumb-link">
                 {applicant.jobTitle}
-              </button>
+              </Link>
             </li>
             <li className="crumb-current" aria-current="page">
               {applicant.name}
@@ -265,8 +260,12 @@ export function ApplicantDetail({ bambooHRSubdomain }: ApplicantDetailProps): JS
                 type="button"
                 className="resume-button"
                 onClick={() => void scoreApplicant(applicant.id, applicant.name)}
-                disabled={scoringApplicationId !== null}
-                title="Score this applicant against the job's scoring criteria"
+                disabled={scoringApplicationId !== null || applicant.isJobClosed}
+                title={
+                  applicant.isJobClosed
+                    ? CLOSED_JOB_SCORING_REASON
+                    : "Score this applicant against the job's scoring criteria"
+                }
                 data-help="score-applicant"
               >
                 {scoringApplicationId === applicant.id ? (

@@ -18,7 +18,8 @@ import { apiService } from './services/api.service';
 import type { SetupStatus } from './types/applicant.types';
 import { BrandMark } from './components/icons/BrandMark';
 import { Icon } from './components/icons/Icon';
-import { ApplicantsList } from './components/ApplicantsList';
+import { JobsPage } from './components/JobsPage';
+import { JobPage } from './components/JobPage';
 import { ApplicantDetail } from './components/ApplicantDetail';
 import { SetupScreen } from './components/SetupScreen';
 import { ConnectionBadge } from './components/ConnectionBadge';
@@ -52,7 +53,7 @@ function AppContent(): JSX.Element {
   // Help points at things on the applicant list and applicant pages only.
   const helpPageKey: HelpPageKey | null = !isConnected
     ? null
-    : location.pathname === '/'
+    : /^\/jobs\/\d+\/?$/.test(location.pathname)
       ? 'list'
       : location.pathname.startsWith('/applicants/')
         ? 'candidate'
@@ -109,8 +110,8 @@ function AppContent(): JSX.Element {
     if (setupStatus === null) {
       // Show the shape of the page being opened instead of a blank "Loading…".
       if (location.pathname.startsWith('/applicants/')) return <ApplicantDetailSkeleton />;
-      if (location.pathname === '/setup') return <div className="app-notice">Loading…</div>;
-      return <ApplicantsListSkeleton />;
+      if (location.pathname.startsWith('/jobs/')) return <ApplicantsListSkeleton />;
+      return <div className="app-notice">Loading…</div>;
     }
     if (!isConnected) {
       // Until BambooHR is connected, every address leads to the setup screen.
@@ -132,10 +133,22 @@ function AppContent(): JSX.Element {
     }
     return (
       <Routes>
+        <Route path="/" element={<JobsPage />} />
         <Route
-          path="/"
+          path="/jobs/:jobId"
           element={
-            <ApplicantsList
+            <JobPage
+              tab="applicants"
+              bambooHRSubdomain={setupStatus.bambooHR.subdomain}
+              claude={setupStatus.claude}
+            />
+          }
+        />
+        <Route
+          path="/jobs/:jobId/settings"
+          element={
+            <JobPage
+              tab="settings"
               bambooHRSubdomain={setupStatus.bambooHR.subdomain}
               claude={setupStatus.claude}
             />

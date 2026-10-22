@@ -35,9 +35,12 @@ interface HelpStep {
 const HELP_STEPS: Record<HelpPageKey, HelpStep[]> = {
   list: [
     { id: 'sync', title: 'Sync with BambooHR', text: 'Bring in new applicants and changes.' },
-    { id: 'job', title: 'Job picker', text: 'Choose the job to look at.' },
-    { id: 'job-settings', title: 'Job settings', text: 'Edit the job posting and how applicants are scored.' },
+    { id: 'breadcrumb', title: 'Breadcrumb', text: 'Go back to the list of jobs.' },
+    { id: 'job-settings', title: 'Settings tab', text: 'Edit the job posting and how applicants are scored.' },
     { id: 'search', title: 'Search', text: 'Find someone by name or email.' },
+    { id: 'filters', title: 'Filters', text: 'Show or hide the stage, scored and flag filters. The number shows how many are active.' },
+    { id: 'score-filter', title: 'Scored filter', text: 'Show only scored applicants, only unscored ones, or both.' },
+    { id: 'flag-filter', title: 'Flag filter', text: 'Hide applicants the AI flagged, or show only the flagged ones.' },
     { id: 'score', title: 'Score new applicants', text: 'Score everyone who has no score yet.' },
     { id: 'rescore', title: 'Re-score', text: 'Score again after changing the criteria.' },
     { id: 'bulk', title: 'Bulk actions', text: 'Move or reject many applicants at once.' },
@@ -48,7 +51,7 @@ const HELP_STEPS: Record<HelpPageKey, HelpStep[]> = {
     { id: 'row-menu', title: 'Row menu', text: 'Score or rescore, move, reject, read the résumé, or copy a link.' },
   ],
   candidate: [
-    { id: 'back', title: 'Breadcrumb', text: 'Back to the list, or to this job\'s applicants.' },
+    { id: 'back', title: 'Breadcrumb', text: 'Back to the list of jobs, or to this job\'s applicants.' },
     { id: 'stepper', title: 'Previous / next', text: 'Step through the applicants in your list.' },
     { id: 'match', title: 'Match score', text: 'AI fit for this job. The assessment below says why.' },
     { id: 'stage', title: 'Move stage', text: 'Move this applicant to another stage.' },

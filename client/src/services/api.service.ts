@@ -60,6 +60,8 @@ class ApiService {
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
     active?: boolean;
+    scored?: 'scored' | 'unscored';
+    flagged?: 'flagged' | 'unflagged';
   }): Promise<{ 
     applicants: ApplicantListItem[]; 
     pagination?: PaginationInfo;
@@ -382,6 +384,8 @@ class ApiService {
     statusIds?: number[];
     search?: string;
     active?: boolean;
+    scored?: 'scored' | 'unscored';
+    flagged?: 'flagged' | 'unflagged';
   }): Promise<{ count: number }> {
     try {
       const response = await this.client.post<{ count: number }>('/score/rescore/preview', filter);
@@ -399,6 +403,8 @@ class ApiService {
     statusIds?: number[];
     search?: string;
     active?: boolean;
+    scored?: 'scored' | 'unscored';
+    flagged?: 'flagged' | 'unflagged';
   }): Promise<StartScoringResult & { count?: number }> {
     try {
       const response = await this.client.post<StartScoringResult & { count?: number }>(

@@ -27,6 +27,7 @@
 
 .search-input {
   flex: 1;
+  min-width: 200px;
   padding: 0.75rem 1rem;
   border: 1px solid var(--hh-border);
   border-radius: 6px;
@@ -243,7 +244,7 @@
 
 
 /* ---- Layout: two tidy rows that wrap instead of overflowing ----
-   Row 1 narrows the list (job, search, status, views); row 2 holds the
+   Row 1 narrows the list (job, search, filters toggle, views; status, scored and flags live in the toggled panel); row 2 holds the
    actions. Every control shares one height so the rows read as aligned. */
 .applicants-filters {
   --control-height: 2.75rem;
@@ -276,6 +277,7 @@
 .search-input,
 .status-filter-button,
 .configure-job-button,
+.filters-toggle-button,
 .applicants-filters .views-menu-button {
   height: var(--control-height);
   padding-top: 0;
@@ -310,4 +312,63 @@
   color: #7a4a00;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.filters-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s;
+}
+
+.filters-toggle-button:hover,
+.filters-toggle-button[aria-expanded='true'] {
+  border-color: var(--hh-primary);
+}
+
+.filters-toggle-button.has-active {
+  border-color: var(--hh-primary);
+  color: var(--hh-primary);
+  font-weight: 500;
+}
+
+.filters-toggle-count {
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--hh-primary);
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.filters-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  background: var(--hh-surface-alt);
+}
+
+.filters-clear-all {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: none;
+  color: var(--hh-primary);
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
 }

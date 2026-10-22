@@ -3,7 +3,7 @@
  *
  * "Views" dropdown for the applicants list: ready-made views (for example "To
  * review, best matches first"), plus views the user saved themselves. A view
- * bundles the status filter, search text and sort order.
+ * bundles the status, scored and flag filters, search text and sort order.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,7 +12,9 @@ import {
   deleteView,
   loadSavedViews,
   saveView,
+  type FlagFilter,
   type ListView,
+  type ScoreFilter,
   type ViewSortColumn,
 } from '../utils/savedViews';
 import { Icon } from './icons/Icon';
@@ -23,6 +25,8 @@ interface ViewsMenuProps {
   current: {
     statusIds: number[];
     search: string;
+    scoreFilter: ScoreFilter;
+    flagFilter: FlagFilter;
     sortColumn: ViewSortColumn;
     sortDirection: 'asc' | 'desc';
   };

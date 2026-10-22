@@ -2,6 +2,7 @@
  * Repository for managing application records in the database
  */
 
+import { buildAiFilterClauses, type AiFilters } from './ai-filters.js';
 import { buildOrderByClause } from './sort-order.js';
 import { getDatabase } from '../db/database.js';
 import type Database from 'better-sqlite3';
@@ -313,8 +314,10 @@ export class ApplicationsRepository {
     limit?: number;
     offset?: number;
     activeOnly?: boolean;
+    scoreFilter?: AiFilters['scoreFilter'];
+    flagFilter?: AiFilters['flagFilter'];
   }): Application[] {
-    const { statusIds, jobId, searchTerm, sortBy = 'applied_date', sortDirection = 'desc', limit, offset, activeOnly } = options;
+    const { statusIds, jobId, searchTerm, sortBy = 'applied_date', sortDirection = 'desc', limit, offset, activeOnly, scoreFilter, flagFilter } = options;
 
     // Build WHERE clause
     const whereClauses: string[] = [];
@@ -341,6 +344,8 @@ export class ApplicationsRepository {
       whereClauses.push('a.active = ?');
       params.push(activeOnly ? 1 : 0);
     }
+
+    whereClauses.push(...buildAiFilterClauses({ scoreFilter, flagFilter }));
 
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
@@ -381,8 +386,10 @@ export class ApplicationsRepository {
     jobId?: number;
     searchTerm?: string;
     activeOnly?: boolean;
+    scoreFilter?: AiFilters['scoreFilter'];
+    flagFilter?: AiFilters['flagFilter'];
   }): number {
-    const { statusIds, jobId, searchTerm, activeOnly } = options;
+    const { statusIds, jobId, searchTerm, activeOnly, scoreFilter, flagFilter } = options;
 
     // Build WHERE clause
     const whereClauses: string[] = [];
@@ -410,6 +417,8 @@ export class ApplicationsRepository {
       params.push(activeOnly ? 1 : 0);
     }
 
+    whereClauses.push(...buildAiFilterClauses({ scoreFilter, flagFilter }));
+
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const query = `
@@ -433,8 +442,10 @@ export class ApplicationsRepository {
     jobId?: number;
     searchTerm?: string;
     activeOnly?: boolean;
+    scoreFilter?: AiFilters['scoreFilter'];
+    flagFilter?: AiFilters['flagFilter'];
   }): number[] {
-    const { statusIds, jobId, searchTerm, activeOnly } = options;
+    const { statusIds, jobId, searchTerm, activeOnly, scoreFilter, flagFilter } = options;
     const whereClauses: string[] = [];
     const params: (string | number)[] = [];
 
@@ -456,6 +467,8 @@ export class ApplicationsRepository {
       whereClauses.push('a.active = ?');
       params.push(activeOnly ? 1 : 0);
     }
+
+    whereClauses.push(...buildAiFilterClauses({ scoreFilter, flagFilter }));
 
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
     const query = `

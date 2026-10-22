@@ -1,0 +1,136 @@
+.job-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 1rem;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.job-card:hover,
+.job-card:focus-visible {
+  border-color: var(--hh-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.job-card-title {
+  grid-column: 1;
+  color: var(--hh-ink);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.job-card-stats {
+  grid-column: 1;
+  color: var(--hh-muted);
+  font-size: 0.9rem;
+}
+
+.job-card-badges {
+  grid-column: 1;
+  display: flex;
+  gap: 0.5rem;
+  min-height: 1.4rem;
+}
+
+.job-card-arrow {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  color: var(--hh-subtle);
+}
+
+.job-card-unscored {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: var(--hh-surface-alt);
+  color: var(--hh-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.jobs-page-empty {
+  padding: 2rem 0;
+  color: var(--hh-muted);
+  text-align: center;
+}
+
+.jobs-empty-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 560px;
+  margin: 3rem auto;
+  padding: 3rem 2rem;
+  border: 1px dashed var(--hh-border);
+  border-radius: 12px;
+  background: white;
+  text-align: center;
+}
+
+.jobs-empty-hero h2 {
+  margin: 0;
+  color: var(--hh-ink);
+  font-size: 1.6rem;
+}
+
+.jobs-empty-hero p {
+  margin: 0;
+  color: var(--hh-muted);
+  line-height: 1.5;
+}
+
+.jobs-empty-icon {
+  color: var(--hh-primary);
+}
+
+.jobs-empty-cta {
+  padding: 0 2rem;
+  font-size: 1.05rem;
+}
+
+.jobs-empty-hint {
+  font-size: 0.875rem;
+}
+
+.job-card.is-closed {
+  background: var(--hh-surface-alt);
+}
+
+.job-card.is-closed .job-card-title {
+  color: var(--hh-muted);
+}
+
+.job-closed-pill {
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  background: var(--hh-border);
+  color: var(--hh-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.closed-jobs {
+  margin-top: 2rem;
+}
+
+.closed-jobs summary {
+  margin-bottom: 1rem;
+  color: var(--hh-muted);
+  font-weight: 600;
+  cursor: pointer;
+}

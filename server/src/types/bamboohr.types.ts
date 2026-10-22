@@ -104,6 +104,8 @@ export interface ApplicantDetail extends ApplicantListItem {
   /** The job this application is for. */
   jobId: number;
   jobTitle: string;
+  /** The job is closed, so the applicant cannot be scored. */
+  isJobClosed: boolean;
   phoneNumber?: string;
   address?: {
     addressLine1?: string;

@@ -15,6 +15,8 @@ import { ApplicationSummaryRepository } from '../repositories/application-summar
 import { ApplicationFlagsRepository } from '../repositories/application-flags.repository.js';
 import { BambooHRService } from './bamboohr.service.js';
 import { ResumeParserService } from './resume-parser.service.js';
+import type { FlagFilter, ScoreFilter } from '../repositories/ai-filters.js';
+import { isClosedJobStatus } from './job-status.js';
 import { getJobReadiness } from '../scoring/job-readiness.js';
 import type { ApplicantListItem, ApplicantDetail } from '../types/bamboohr.types.js';
 
@@ -27,6 +29,8 @@ export interface ListApplicantsFilters {
   jobId?: number;
   search?: string;
   activeOnly?: boolean;
+  scoreFilter?: ScoreFilter;
+  flagFilter?: FlagFilter;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   page?: number;
@@ -66,6 +70,10 @@ export interface JobSummary {
   isCriteriaConfirmed: boolean;
   /** Posting text exists and the criteria are confirmed: scoring is allowed. */
   isReadyToScore: boolean;
+  /** BambooHR's label for the job (Open, Draft, Filled, ...), or Closed once it left BambooHR. */
+  status: string | null;
+  /** The job is filled, canceled or gone from BambooHR; the jobs page lists it after open ones. */
+  isClosed: boolean;
 }
 
 /**
@@ -118,6 +126,8 @@ export class ApplicantQueryService {
       jobId: filters.jobId,
       searchTerm: filters.search,
       activeOnly: filters.activeOnly,
+      scoreFilter: filters.scoreFilter,
+      flagFilter: filters.flagFilter,
     });
 
     const applications = this.applicationsRepo.getFiltered({
@@ -125,6 +135,8 @@ export class ApplicantQueryService {
       jobId: filters.jobId,
       searchTerm: filters.search,
       activeOnly: filters.activeOnly,
+      scoreFilter: filters.scoreFilter,
+      flagFilter: filters.flagFilter,
       sortBy: filters.sortBy,
       sortDirection: filters.sortDirection,
       limit: limit + 1, // +1 to detect whether more pages exist
@@ -240,6 +252,7 @@ export class ApplicantQueryService {
       appliedDate: application.appliedDate,
       jobId: job.id,
       jobTitle: job.title,
+      isJobClosed: isClosedJobStatus(job.status),
       rating: application.rating,
       phoneNumber: applicant.phoneNumber,
       address,
@@ -439,6 +452,7 @@ export class ApplicantQueryService {
       SELECT j.id,
              j.title,
              j.posting_url,
+             j.status,
              j.criteria_confirmed_at,
              COUNT(a.id) AS application_count,
              SUM(CASE WHEN a.active = 1 THEN 1 ELSE 0 END) AS active_count,
@@ -459,6 +473,7 @@ export class ApplicantQueryService {
           id: number;
           title: string;
           posting_url: string | null;
+          status: string | null;
           criteria_confirmed_at: string | null;
           application_count: number;
           active_count: number | null;
@@ -469,7 +484,7 @@ export class ApplicantQueryService {
       >(query)
       .all();
 
-    return rows.map((row) => {
+    const jobs = rows.map((row): JobSummary => {
       const readiness = getJobReadiness({
         description: row.has_posting === 1 ? 'x' : '',
         criteriaConfirmedAt: row.criteria_confirmed_at,
@@ -485,8 +500,12 @@ export class ApplicantQueryService {
       postingUrl: row.posting_url,
       isCriteriaConfirmed: readiness.isCriteriaConfirmed,
       isReadyToScore: readiness.isReadyToScore,
+      status: row.status,
+      isClosed: isClosedJobStatus(row.status),
       };
     });
+    // Open jobs first; closed ones follow, each group keeping its most-recent-first order.
+    return jobs.sort((a, b) => Number(a.isClosed) - Number(b.isClosed));
   }
 
   /**
@@ -512,12 +531,16 @@ export class ApplicantQueryService {
     jobId?: number;
     search?: string;
     activeOnly?: boolean;
+    scoreFilter?: ScoreFilter;
+    flagFilter?: FlagFilter;
   }): number[] {
     return this.applicationsRepo.getFilteredIds({
       statusIds: filter.statusIds,
       jobId: filter.jobId,
       searchTerm: filter.search,
       activeOnly: filter.activeOnly,
+      scoreFilter: filter.scoreFilter,
+      flagFilter: filter.flagFilter,
     });
   }
 }

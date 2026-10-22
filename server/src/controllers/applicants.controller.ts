@@ -5,6 +5,7 @@
  * shared with the MCP server.
  */
 
+import { parseFlagFilter, parseScoreFilter } from '../repositories/ai-filters.js';
 import type { Request, Response } from 'express';
 import { respondWithError } from '../errors/respond-with-error.js';
 import { ApplicantQueryService, DataIntegrityError } from '../services/applicant-query.service.js';
@@ -102,6 +103,8 @@ interface ApplicantQueryParams {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   active?: string; // Filter by active status (true/false)
+  scored?: string; // 'scored' | 'unscored' (anything else = all)
+  flagged?: string; // 'flagged' | 'unflagged' (anything else = all)
 }
 
 export class ApplicantsController {
@@ -123,6 +126,8 @@ export class ApplicantsController {
         sortBy,
         sortDirection = 'desc',
         active: activeStr,
+        scored,
+        flagged,
       } = req.query;
 
       const statusIds = statusIdsStr
@@ -134,6 +139,8 @@ export class ApplicantsController {
         jobId: jobId ? parseInt(jobId, 10) : undefined,
         search,
         activeOnly: activeStr === 'true' ? true : activeStr === 'false' ? false : undefined,
+        scoreFilter: parseScoreFilter(scored),
+        flagFilter: parseFlagFilter(flagged),
         sortBy,
         sortDirection,
         page: pageStr ? parseInt(pageStr, 10) : undefined,

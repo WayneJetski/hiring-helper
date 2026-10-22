@@ -28,6 +28,7 @@ export interface ApplicantDetail extends ApplicantListItem {
   /** The job this application is for. */
   jobId: number;
   jobTitle: string;
+  isJobClosed: boolean; // closed jobs cannot be scored
   phoneNumber?: string;
   address?: ApplicantAddress;
   source?: string;
@@ -72,6 +73,8 @@ export interface JobSummary {
   unscoredCount: number; // active applications with no AI score yet
   isCriteriaConfirmed: boolean; // a person confirmed the scoring criteria
   isReadyToScore: boolean; // posting text exists and criteria are confirmed
+  status: string | null; // BambooHR's label (Open, Draft, Filled, ...), or Closed once it left BambooHR
+  isClosed: boolean; // filled, canceled or gone from BambooHR; listed after open jobs
 }
 
 /** Status of a headless scoring run (polled while it runs). */

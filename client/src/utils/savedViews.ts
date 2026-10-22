@@ -9,11 +9,16 @@ import { groupStatuses } from './statusGroups';
 
 export type ViewSortColumn = 'name' | 'email' | 'stage' | 'confidence' | 'appliedDate';
 
+export type ScoreFilter = 'all' | 'scored' | 'unscored';
+export type FlagFilter = 'all' | 'flagged' | 'unflagged';
+
 export interface ListView {
   id: string;
   name: string;
   statusIds: number[];
   search: string;
+  scoreFilter: ScoreFilter;
+  flagFilter: FlagFilter;
   sortColumn: ViewSortColumn;
   sortDirection: 'asc' | 'desc';
   isBuiltIn: boolean;
@@ -39,12 +44,25 @@ export function buildBuiltInViews(statuses: Array<{ id: number; label: string }>
         name: definition.name,
         statusIds: group.statuses.map((status) => status.id),
         search: '',
+        scoreFilter: 'all' as const,
+        flagFilter: 'all' as const,
         sortColumn: 'confidence' as const,
         sortDirection: 'desc' as const,
         isBuiltIn: true,
       },
     ];
   });
+}
+
+/** Views saved before these filters existed have neither field; they mean "all". */
+function normalizeSavedView(view: ListView): ListView {
+  const { scoreFilter, flagFilter } = view as Partial<ListView>;
+  return {
+    ...view,
+    scoreFilter: scoreFilter === 'scored' || scoreFilter === 'unscored' ? scoreFilter : 'all',
+    flagFilter: flagFilter === 'flagged' || flagFilter === 'unflagged' ? flagFilter : 'all',
+    isBuiltIn: false,
+  };
 }
 
 function isSavedView(value: unknown): value is ListView {
@@ -67,7 +85,7 @@ export function loadSavedViews(): ListView[] {
   try {
     const parsed = JSON.parse(storage.getItem(SAVED_VIEWS_KEY) ?? '[]');
     return Array.isArray(parsed)
-      ? parsed.filter(isSavedView).map((view) => ({ ...view, isBuiltIn: false }))
+      ? parsed.filter(isSavedView).map(normalizeSavedView)
       : [];
   } catch {
     return [];

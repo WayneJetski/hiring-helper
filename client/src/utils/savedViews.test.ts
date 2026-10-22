@@ -5,7 +5,10 @@ import { installMemoryStorage } from './testStorage.js';
 
 beforeEach(installMemoryStorage);
 
-const sample = { search: '', sortColumn: 'confidence' as const, sortDirection: 'desc' as const };
+const sample = {
+  search: '',
+  scoreFilter: 'all' as const,
+  flagFilter: 'all' as const, sortColumn: 'confidence' as const, sortDirection: 'desc' as const };
 
 test('built-in views come from the status groups that exist', () => {
   const views = buildBuiltInViews([
@@ -52,4 +55,21 @@ test('ignores corrupted stored views', () => {
     JSON.stringify([{ nonsense: true }, 'x'])
   );
   assert.deepEqual(loadSavedViews(), []);
+});
+
+test('a view saved with score and flag filters keeps them', () => {
+  saveView({ name: 'Clean and scored', statusIds: [], ...sample, scoreFilter: 'scored', flagFilter: 'unflagged' });
+  const [view] = loadSavedViews();
+  assert.equal(view.scoreFilter, 'scored');
+  assert.equal(view.flagFilter, 'unflagged');
+});
+
+test('a view saved before these filters existed loads as showing everything', () => {
+  const legacy = [
+    { id: 'custom:1', name: 'Old', statusIds: [1], search: '', sortColumn: 'name', sortDirection: 'asc' },
+  ];
+  window.localStorage.setItem('hiringHelper.savedViews', JSON.stringify(legacy));
+  const [view] = loadSavedViews();
+  assert.equal(view.scoreFilter, 'all');
+  assert.equal(view.flagFilter, 'all');
 });
