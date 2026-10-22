@@ -48,6 +48,12 @@ const ICON_PATHS = {
       <path d="M12 16v-4M12 8h.01" />
     </>
   ),
+  download: (
+    <>
+      <path d="M12 4v12M7 11l5 5 5-5" />
+      <path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
+    </>
+  ),
   upload: (
     <>
       <path d="M12 16V4M7 9l5-5 5 5" />

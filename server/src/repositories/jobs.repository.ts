@@ -187,6 +187,28 @@ export class JobsRepository {
     return result.changes > 0;
   }
 
+  /**
+   * Replace a job's structured scoring criteria (used when importing a shared export).
+   * A null config puts the job back on the defaults. The confirmation time is only ever
+   * set, never cleared, so an import cannot un-confirm a job that was ready to score.
+   * Any legacy hand-written rubric is left alone. Returns false if the job does not exist.
+   */
+  importCriteria(
+    jobId: number,
+    criteria: { scoringConfigJson: string | null; criteriaConfirmedAt: string | null }
+  ): boolean {
+    const result = this.db
+      .prepare(
+        `UPDATE jobs
+         SET scoring_config = ?,
+             criteria_confirmed_at = COALESCE(?, criteria_confirmed_at),
+             updated_at = datetime('now')
+         WHERE id = ?`
+      )
+      .run(criteria.scoringConfigJson, criteria.criteriaConfirmedAt, jobId);
+    return result.changes > 0;
+  }
+
   /** Record that a person confirmed this job's scoring criteria. */
   confirmCriteria(jobId: number): boolean {
     const result = this.db

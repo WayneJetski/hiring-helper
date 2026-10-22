@@ -134,3 +134,7 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.jobs-toolbar {
+  margin-bottom: 1.25rem;
+}

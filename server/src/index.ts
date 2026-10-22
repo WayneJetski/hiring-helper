@@ -16,6 +16,7 @@ import syncRoutes from './routes/sync.routes.js';
 import scoringRoutes from './routes/scoring.routes.js';
 import setupRoutes from './routes/setup.routes.js';
 import updateRoutes from './routes/update.routes.js';
+import transferRoutes from './routes/transfer.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import { allowedOriginsFor, createLocalOnlyGuard } from './middleware/local-only.middleware.js';
@@ -60,6 +61,10 @@ const expensiveOpLimiter = rateLimit({
 
 // Body parsing
 // The API speaks JSON only; accepting HTML form posts would only widen the cross-site surface.
+// An export file carries every scored applicant's report, so importing one needs more room
+// than the 1mb every other route gets. This parser must come first: it then marks the body
+// as read, and the general one below skips it.
+app.use('/api/transfer/import', express.json({ limit: '50mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 // Request logging
@@ -81,6 +86,7 @@ app.use('/api/sync', expensiveOpLimiter, syncRoutes);
 app.use('/api/score', expensiveOpLimiter, scoringRoutes);
 app.use('/api/setup', expensiveOpLimiter, setupRoutes);
 app.use('/api/update', expensiveOpLimiter, updateRoutes);
+app.use('/api/transfer', expensiveOpLimiter, transferRoutes);
 
 // Built web app (packaged installs run everything from this one server)
 if (registerClientAssets(app, CLIENT_DIST_DIR)) {

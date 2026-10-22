@@ -457,3 +457,14 @@ export function parseLegacyRubric(prompt: string): ScoringConfig | null {
   // The migration must produce something the editor will accept on save.
   return validateScoringConfig(config).ok ? config : null;
 }
+
+/** A job's saved criteria as a validated config; missing or corrupt JSON means "defaults" (null). */
+export function parseStoredScoringConfig(json: string | null | undefined): ScoringConfig | null {
+  if (!json) return null;
+  try {
+    const validated = validateScoringConfig(JSON.parse(json));
+    return validated.ok ? validated.config : null;
+  } catch {
+    return null;
+  }
+}
