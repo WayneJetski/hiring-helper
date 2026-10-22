@@ -95,18 +95,18 @@ export function ScoringControls({
   }, [pollStatus, stopPolling]);
 
   // Reflect a run already in progress (for example after a page reload) and
-  // clean up the timer on unmount.
+  // clean up the timer on unmount. The server remembers the last run after it ends, so a
+  // finished one is deliberately ignored here: its message belongs to the person who watched
+  // it finish, and showing it on every load made a dismissed banner come back.
   useEffect(() => {
     let isCancelled = false;
     apiService
       .getScoringStatus()
       .then((status) => {
-        if (isCancelled) return;
+        if (isCancelled || !status.running) return;
         setScoreStatus(status);
-        if (status.running) {
-          setIsScoring(true);
-          startPolling();
-        }
+        setIsScoring(true);
+        startPolling();
       })
       .catch(() => {});
     return () => {
