@@ -551,6 +551,19 @@ class ApiService {
   }
 
   /**
+   * Whether a sync is running on the server right now, whoever started it
+   * (this tab, another tab, or the automatic first sync).
+   */
+  async isSyncRunning(): Promise<boolean> {
+    try {
+      const response = await this.client.get<{ isSyncing?: boolean }>('/sync/status');
+      return response.data.isSyncing === true;
+    } catch (error) {
+      this.handleError(error, 'Failed to fetch sync status');
+    }
+  }
+
+  /**
    * A short multiple-choice survey tailored to the role (written by AI).
    * Generation takes a while, so this waits longer than other calls and can be
    * cancelled.

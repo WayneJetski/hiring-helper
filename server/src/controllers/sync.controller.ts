@@ -90,16 +90,19 @@ export class SyncController {
   ): Promise<void> {
     try {
       const lastSync = syncService.getLastSync();
+      const isSyncing = syncService.isSyncing();
 
       if (!lastSync) {
         res.json({
           message: 'No sync has been performed yet',
+          isSyncing,
           lastSync: null,
         });
         return;
       }
 
       res.json({
+        isSyncing,
         lastSync: {
           timestamp: lastSync.timestamp,
           syncType: lastSync.syncType,

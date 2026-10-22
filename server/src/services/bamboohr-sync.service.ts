@@ -3,6 +3,7 @@
  * Handles synchronization of data from BambooHR API to local SQLite database
  */
 
+import { SingleFlight } from '../utils/single-flight.js';
 import { CLOSED_STATUS_LABEL, findJobsToClose } from './job-status.js';
 import { BambooHRService } from './bamboohr.service.js';
 import { JobsRepository } from '../repositories/jobs.repository.js';
@@ -17,6 +18,11 @@ import { fetchPostingText } from './job-posting-fetcher.js';
 import { config } from '../config/env.config.js';
 import type { BambooHRApplication } from '../types/bamboohr.types.js';
 
+// Shared by every instance (the server start-up, setup and sync controllers each create
+// one), so overlapping syncs join one run instead of racing each other and BambooHR's limit.
+const syncFlight = new SingleFlight<number>();
+let lastStatusUpdatesPulled = 0;
+
 export class BambooHRSyncService {
   private bambooHRService: BambooHRService;
   private jobsRepo: JobsRepository;
@@ -25,9 +31,6 @@ export class BambooHRSyncService {
   private statesRepo: ApplicationStatesRepository;
   private contentUpdatesRepo: ContentUpdatesRepository;
   private jobDescriptionService: JobDescriptionService;
-  /** Number of local statuses overwritten by BambooHR on the last sync. */
-  private lastStatusUpdatesPulled = 0;
-
   constructor() {
     this.bambooHRService = new BambooHRService();
     this.jobsRepo = new JobsRepository();
@@ -110,11 +113,24 @@ export class BambooHRSyncService {
     }
   }
 
+  /** Whether a sync is running right now (started by any caller in this process). */
+  isSyncing(): boolean {
+    return syncFlight.isRunning;
+  }
+
   /**
-   * Sync applications from BambooHR to local database
-   * Uses the last sync timestamp to only fetch new/updated applications
+   * Sync applications from BambooHR to local database.
+   * A call made while a sync is already running joins it (and gets its result), so a
+   * request for a full sync that arrives mid-way is satisfied by the running one.
    */
-  async syncApplications(forceFull: boolean = false): Promise<number> {
+  syncApplications(forceFull: boolean = false): Promise<number> {
+    return syncFlight.run(() => this.runSync(forceFull));
+  }
+
+  /**
+   * One sync run. Uses the last sync timestamp to only fetch new/updated applications.
+   */
+  private async runSync(forceFull: boolean): Promise<number> {
     console.info('🔄 Starting BambooHR sync...');
 
     try {
@@ -212,7 +228,7 @@ export class BambooHRSyncService {
       await this.fillPostingsForNewJobs(knownJobIds);
 
       const statusUpdatesPulled = this.pullStatuses(statusList);
-      this.lastStatusUpdatesPulled = statusUpdatesPulled;
+      lastStatusUpdatesPulled = statusUpdatesPulled;
       if (statusUpdatesPulled > 0) {
         console.info(`✅ Pulled ${statusUpdatesPulled} status update(s) from BambooHR`);
       }
@@ -381,7 +397,7 @@ export class BambooHRSyncService {
 
   /** How many local statuses the last sync overwrote with BambooHR's value. */
   getLastStatusUpdatesPulled(): number {
-    return this.lastStatusUpdatesPulled;
+    return lastStatusUpdatesPulled;
   }
 
   /**
