@@ -31,9 +31,12 @@ import type {
   BambooHRConnection,
   LastSync,
 } from '../types/applicant.types';
+import type { ImportDecisions, ImportPlan, ImportResult } from '../types/transfer.types';
 
 /** AI generation can take a minute, far longer than an ordinary request. */
 const GENERATION_TIMEOUT_MS = 200_000;
+// Exports and imports carry every scored applicant's report, so they can be large.
+const LARGE_TRANSFER_TIMEOUT_MS = 120_000;
 
 class ApiService {
   private client: AxiosInstance;
@@ -547,6 +550,46 @@ class ApiService {
       return response.data.lastSync;
     } catch (error) {
       this.handleError(error, 'Failed to fetch sync status');
+    }
+  }
+
+  /** Every job's settings and every scored applicant's score and report, as the export file. */
+  async exportJobSettingsAndScores(): Promise<unknown> {
+    try {
+      const response = await this.client.get<unknown>('/transfer/export', {
+        timeout: LARGE_TRANSFER_TIMEOUT_MS,
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error, 'Failed to export job settings and scores');
+    }
+  }
+
+  /** What importing this file would fill and what would conflict. Changes nothing. */
+  async previewImport(bundle: unknown): Promise<ImportPlan> {
+    try {
+      const response = await this.client.post<ApiResponse<ImportPlan>>(
+        '/transfer/import/preview',
+        bundle,
+        { timeout: LARGE_TRANSFER_TIMEOUT_MS }
+      );
+      return response.data.data;
+    } catch (error) {
+      this.handleError(error, 'Failed to read the export file');
+    }
+  }
+
+  /** Import the file: fill what is missing, and replace the conflicts the person chose. */
+  async applyImport(bundle: unknown, decisions: ImportDecisions): Promise<ImportResult> {
+    try {
+      const response = await this.client.post<ApiResponse<ImportResult>>(
+        '/transfer/import/apply',
+        { bundle, decisions },
+        { timeout: LARGE_TRANSFER_TIMEOUT_MS }
+      );
+      return response.data.data;
+    } catch (error) {
+      this.handleError(error, 'Failed to import job settings and scores');
     }
   }
 

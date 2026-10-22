@@ -1,0 +1,105 @@
+.import-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: min(560px, 80vw);
+}
+
+.import-preview h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: var(--hh-ink);
+}
+
+.import-preview ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.import-note,
+.import-empty,
+.import-list {
+  margin: 0;
+  color: var(--hh-muted);
+  line-height: 1.45;
+}
+
+.import-conflicts {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--hh-border);
+  border-radius: 6px;
+  list-style: none;
+}
+
+.import-conflicts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.import-conflict-job,
+.import-conflict-scores,
+.import-more {
+  color: var(--hh-muted);
+  font-size: 0.9rem;
+}
+
+.import-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.import-choice label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.import-recommended {
+  color: var(--hh-primary);
+  font-weight: 600;
+}
+
+.import-error {
+  margin: 0;
+  color: #b42318;
+}
+
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.import-cancel,
+.import-confirm {
+  height: 2.5rem;
+  padding: 0 1.25rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.import-cancel {
+  border: 1px solid var(--hh-border);
+  background: white;
+}
+
+.import-confirm {
+  border: none;
+  background: var(--hh-primary);
+  color: white;
+  font-weight: 600;
+}
+
+.import-cancel:disabled,
+.import-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

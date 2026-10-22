@@ -187,6 +187,35 @@ export class JobsRepository {
     return result.changes > 0;
   }
 
+  /**
+   * Replace a job's scoring criteria wholesale (used when importing a shared export):
+   * the structured config, the legacy rubric and the confirmation time are all set to
+   * the given values, with null clearing each. Returns false if the job does not exist.
+   */
+  importCriteria(
+    jobId: number,
+    criteria: {
+      scoringConfigJson: string | null;
+      legacyPrompt: string | null;
+      criteriaConfirmedAt: string | null;
+    }
+  ): boolean {
+    const result = this.db
+      .prepare(
+        `UPDATE jobs
+         SET scoring_config = ?, system_prompt = ?, criteria_confirmed_at = ?,
+             updated_at = datetime('now')
+         WHERE id = ?`
+      )
+      .run(
+        criteria.scoringConfigJson,
+        criteria.legacyPrompt,
+        criteria.criteriaConfirmedAt,
+        jobId
+      );
+    return result.changes > 0;
+  }
+
   /** Record that a person confirmed this job's scoring criteria. */
   confirmCriteria(jobId: number): boolean {
     const result = this.db

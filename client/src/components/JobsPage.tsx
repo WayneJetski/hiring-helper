@@ -5,14 +5,15 @@
  * settings) hangs off a job, so there is no cross-job view.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useBambooHRSync } from '../hooks/useBambooHRSync';
 import { useJobs } from '../hooks/useJobs';
 import type { JobSummary } from '../types/applicant.types';
 import { formatDate } from '../utils/formatting';
 import { Icon } from './icons/Icon';
-import { StatusIcon } from './icons/StatusIcon';
+import { StatusIcon, type Notice } from './icons/StatusIcon';
+import { TransferControls } from './TransferControls';
 import { SyncControls } from './SyncControls';
 import './JobsPage.css';
 
@@ -44,9 +45,19 @@ function JobCards({ jobs }: { jobs: JobSummary[] }): JSX.Element {
   );
 }
 
+const TRANSFER_NOTICE_MS = 8000;
+
 export function JobsPage(): JSX.Element {
   const { jobs, isLoading, loadError, reloadJobs } = useJobs();
   const [dataVersion, setDataVersion] = useState<number>(0);
+  const [transferNotice, setTransferNotice] = useState<Notice | null>(null);
+
+  // A success message clears itself; a warning or error stays until the next action.
+  useEffect(() => {
+    if (transferNotice?.tone !== 'success') return;
+    const timer = setTimeout(() => setTransferNotice(null), TRANSFER_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [transferNotice]);
 
   const handleSynced = useCallback((): void => setDataVersion((version) => version + 1), []);
   const { isSyncing, notice, sync } = useBambooHRSync({ jobs, reloadJobs, onSynced: handleSynced });
@@ -129,10 +140,24 @@ export function JobsPage(): JSX.Element {
         )}
       </div>
 
+      <div className="jobs-toolbar">
+        <TransferControls
+          onImported={async () => void (await reloadJobs())}
+          onNotice={setTransferNotice}
+        />
+      </div>
+
       {notice && (
         <div className={`sync-message ${notice.tone}`} role="status">
           <StatusIcon tone={notice.tone} />
           <span>{notice.text}</span>
+        </div>
+      )}
+
+      {transferNotice && (
+        <div className={`sync-message ${transferNotice.tone}`} role="status">
+          <StatusIcon tone={transferNotice.tone} />
+          <span>{transferNotice.text}</span>
         </div>
       )}
 
